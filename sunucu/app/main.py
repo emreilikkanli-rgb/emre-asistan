@@ -89,26 +89,89 @@ def robots():
     return "User-agent: *\nDisallow: /\n"
 
 
+def _giris_sayfa(request, sablon, status_code=200, **ctx):
+    ctx.setdefault("kullanici_var", bool(auth.kullanici()))
+    return templates.TemplateResponse(request, sablon, ctx, status_code=status_code)
+
+
 @app.get("/giris", response_class=HTMLResponse)
 def giris_form(request: Request):
     if not auth.configured():
-        return templates.TemplateResponse(request, "giris.html", {"hata": "Sunucu henüz kurulmadı: APP_PASSWORD_HASH ve SESSION_SECRET değişkenlerini Railway'de tanımlayın.", "kapali": True})
-    return templates.TemplateResponse(request, "giris.html", {"hata": auth.lockout_message(auth.client_ip(request))})
+        return _giris_sayfa(request, "giris.html", hata="Sunucu henüz kurulmadı: SESSION_SECRET ve şifre tanımlanmamış.", kapali=True)
+    return _giris_sayfa(request, "giris.html", hata=auth.lockout_message(auth.client_ip(request)),
+                        bilgi="Yeni şifreniz kaydedildi." if request.query_params.get("yenilendi") else "")
 
 
 @app.post("/giris")
-def giris(request: Request, sifre: str = Form(""), kod: str = Form("")):
+def giris(request: Request, kullanici: str = Form(""), sifre: str = Form(""), kod: str = Form(""), hatirla: str = Form("")):
     if not auth.configured():
         return RedirectResponse("/giris", status_code=303)
     ip = auth.client_ip(request)
     lock = auth.lockout_message(ip)
     if lock:
-        return templates.TemplateResponse(request, "giris.html", {"hata": lock}, status_code=429)
-    sid = auth.check_login(sifre, kod, ip)
+        return _giris_sayfa(request, "giris.html", 429, hata=lock, kullanici=kullanici)
+    sid = auth.check_login(kullanici, sifre, kod, ip, hatirla=bool(hatirla))
     if not sid:
-        return templates.TemplateResponse(request, "giris.html", {"hata": "Şifre ya da doğrulama kodu hatalı." if auth.totp_enabled() else "Şifre hatalı."}, status_code=401)
+        return _giris_sayfa(request, "giris.html", 401, kullanici=kullanici,
+                            hata="Kullanıcı adı ya da şifre hatalı." if auth.kullanici() else "Şifre hatalı.")
     resp = RedirectResponse("/", status_code=303)
-    resp.set_cookie(auth.COOKIE, auth.cookie_value(sid), max_age=auth.SESSION_MAX, httponly=True, secure=SECURE, samesite="strict")
+    resp.set_cookie(auth.COOKIE, auth.cookie_value(sid), max_age=auth.HATIRLA_MAX if hatirla else None,
+                    httponly=True, secure=SECURE, samesite="lax" if hatirla else "strict")
+    return resp
+
+
+@app.get("/sifremi-unuttum", response_class=HTMLResponse)
+def sifremi_unuttum_form(request: Request):
+    return _giris_sayfa(request, "sifre_unuttum.html")
+
+
+@app.post("/sifremi-unuttum", response_class=HTMLResponse)
+def sifremi_unuttum(request: Request, mail: str = Form("")):
+    ip = auth.client_ip(request)
+    lock = auth.lockout_message(ip)
+    if lock:
+        return _giris_sayfa(request, "sifre_unuttum.html", 429, hata=lock)
+    t, neden = auth.sifirlama_iste(mail, ip)
+    if neden == "sik":
+        return _giris_sayfa(request, "sifre_unuttum.html", 429, hata="Az önce bir link gönderildi. Gelen kutunuzu kontrol edin; 5 dakika sonra yeniden isteyebilirsiniz.")
+    if neden == "gunluk":
+        return _giris_sayfa(request, "sifre_unuttum.html", 429, hata="Bugün için link sınırına ulaşıldı. Yarın yeniden deneyin.")
+    if t:
+        link = "%s/sifre-yenile?t=%s" % (os.environ.get("APP_URL", "https://ea-sunucu-production.up.railway.app").rstrip("/"), t)
+        html = ('<div style="font:15px Calibri,Arial,sans-serif;color:#17202e;max-width:520px">'
+                "<p>Merhaba Emre Bey,</p><p>Emre'nin Asistanı için yeni kullanıcı adı ve şifre oluşturmak üzere aşağıdaki düğmeye basın. "
+                "Link <b>30 dakika</b> geçerlidir ve yalnızca bir kez kullanılabilir.</p>"
+                '<p><a href="%s" style="display:inline-block;padding:12px 22px;border-radius:10px;background:#5b4fe9;color:#fff;text-decoration:none;font-weight:600">'
+                "Yeni şifre oluştur</a></p><p style=\"color:#6b6a66;font-size:13px\">Bu isteği siz yapmadıysanız bu maili dikkate almayın; şifreniz değişmez.</p></div>") % _html.escape(link)
+        try:
+            ews = Ews(os.environ.get("EWS_HOST", ""), os.environ.get("EWS_USER", ""), os.environ.get("EWS_PASSWORD", ""))
+            ews_gonder.send(ews, auth.KURTARMA_MAIL, "Emre'nin Asistanı · şifre yenileme linki", html)
+            log.info("Şifre yenileme linki gönderildi")
+        except (EwsError, ValueError) as ex:
+            log.warning("Şifre yenileme maili gönderilemedi: %s", ex)
+            db.kimlik_del("sifirlama")
+            return _giris_sayfa(request, "sifre_unuttum.html", 502, hata="Mail gönderilemedi. Biraz sonra yeniden deneyin.")
+    # Adres yanlış olsa da aynı cevap: hangi adresin kayıtlı olduğu dışarıya söylenmez
+    return _giris_sayfa(request, "sifre_unuttum.html", gonderildi=True)
+
+
+@app.get("/sifre-yenile", response_class=HTMLResponse)
+def sifre_yenile_form(request: Request, t: str = ""):
+    if not auth.sifirlama_gecerli(t):
+        return _giris_sayfa(request, "sifre_yenile.html", 400, gecersiz=True)
+    return _giris_sayfa(request, "sifre_yenile.html", t=t, kullanici=auth.kullanici())
+
+
+@app.post("/sifre-yenile", response_class=HTMLResponse)
+def sifre_yenile(request: Request, t: str = Form(""), kullanici: str = Form(""), sifre: str = Form(""), sifre2: str = Form("")):
+    if sifre != sifre2:
+        return _giris_sayfa(request, "sifre_yenile.html", 400, t=t, kullanici=kullanici, hata="İki şifre aynı değil.")
+    sid, hata = auth.sifirlama_tamamla(t, kullanici, sifre, auth.client_ip(request))
+    if not sid:
+        return _giris_sayfa(request, "sifre_yenile.html", 400, t=t, kullanici=kullanici, hata=hata,
+                            gecersiz=not auth.sifirlama_gecerli(t))
+    resp = RedirectResponse("/", status_code=303)
+    resp.set_cookie(auth.COOKIE, auth.cookie_value(sid), httponly=True, secure=SECURE, samesite="strict")
     return resp
 
 

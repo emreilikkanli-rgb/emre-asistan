@@ -1,0 +1,22 @@
+{% extends "_auth.html" %}
+{% block title %}Şifremi unuttum · Emre'nin Asistanı{% endblock %}
+{% block alt %}Şifre yenileme{% endblock %}
+{% block yetenek %}{% endblock %}
+{% block icerik %}
+  {% if gonderildi %}
+    <div class="not ok" role="status">Adres doğruysa şifre yenileme linki gönderildi. Gelen kutunuzu kontrol edin; link <b>30 dakika</b> geçerlidir.</div>
+    <p class="ipucu" style="margin-top:14px;text-align:center"><a href="/giris">← Girişe dön</a></p>
+  {% else %}
+    {% if hata %}<div class="not hata" role="alert" style="margin-bottom:14px">{{ hata }}</div>{% endif %}
+    <form method="post" action="/sifremi-unuttum">
+      <p class="ipucu">Doğrulama için kayıtlı mail adresinizi yazın. Size yeni kullanıcı adı ve şifre oluşturabileceğiniz bir link gönderilecek.</p>
+      <div class="alan">
+        <label for="mail">Mail adresi</label>
+        <div class="kutu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/></svg>
+          <input type="email" id="mail" name="mail" required autocomplete="email" autocapitalize="none" placeholder="ad.soyad@sirket.com" autofocus></div>
+      </div>
+      <button class="dugme" type="submit">Doğrulama linki gönder</button>
+      <p class="ipucu" style="text-align:center"><a href="/giris">← Girişe dön</a></p>
+    </form>
+  {% endif %}
+{% endblock %}

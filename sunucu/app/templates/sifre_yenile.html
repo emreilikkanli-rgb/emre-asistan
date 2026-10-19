@@ -1,0 +1,35 @@
+{% extends "_auth.html" %}
+{% block title %}Yeni şifre · Emre'nin Asistanı{% endblock %}
+{% block alt %}Yeni kullanıcı adı ve şifre{% endblock %}
+{% block yetenek %}{% endblock %}
+{% block icerik %}
+  {% if gecersiz %}
+    <div class="not hata" role="alert">Bu link geçersiz ya da süresi dolmuş.</div>
+    <p class="ipucu" style="margin-top:14px;text-align:center"><a href="/sifremi-unuttum">Yeni link iste</a> · <a href="/giris">Girişe dön</a></p>
+  {% else %}
+    {% if hata %}<div class="not hata" role="alert" style="margin-bottom:14px">{{ hata }}</div>{% endif %}
+    <form method="post" action="/sifre-yenile" autocomplete="on">
+      <input type="hidden" name="t" value="{{ t }}">
+      <div class="alan">
+        <label for="kullanici">Kullanıcı adı</label>
+        <div class="kutu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+          <input type="text" id="kullanici" name="kullanici" value="{{ kullanici or '' }}" required minlength="3" maxlength="32" pattern="[A-Za-z0-9._\-]{3,32}"
+            autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="ör. emre"></div>
+        <p class="ipucu">Harf, rakam, nokta ya da tire; Türkçe karakter olmadan.</p>
+      </div>
+      <div class="alan">
+        <label for="sifre">Yeni şifre</label>
+        <div class="kutu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
+          <input class="sifreli" type="password" id="sifre" name="sifre" required minlength="6" autocomplete="new-password" placeholder="en az 6 karakter">
+          <button type="button" class="goster" data-icin="sifre">Göster</button></div>
+      </div>
+      <div class="alan">
+        <label for="sifre2">Yeni şifre (tekrar)</label>
+        <div class="kutu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
+          <input class="sifreli" type="password" id="sifre2" name="sifre2" required minlength="6" autocomplete="new-password" placeholder="tekrar yazın">
+          <button type="button" class="goster" data-icin="sifre2">Göster</button></div>
+      </div>
+      <button class="dugme" type="submit">Kaydet ve giriş yap</button>
+    </form>
+  {% endif %}
+{% endblock %}

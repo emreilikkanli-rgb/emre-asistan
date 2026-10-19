@@ -1,8 +1,9 @@
 """Görev maili gönderme: Exchange'de TEK yazma işlemi.
 
-Yalnızca /api/gorev-mail ucundan, Emre Bey EA sitesinde oturum açıkken "Mail ile gönder"
-düğmesine basıp onayladığında çağrılır. Zamanlayıcılar, mail okuma ve Claude'un anahtarlı
-yazma ucu bu modülü kullanmaz. Gönderilen mail Gönderilmiş Öğeler'e kaydedilir.
+Yalnızca iki yerden, Emre Bey'in kendi isteğiyle çağrılır:
+1) /api/gorev-mail: oturum açıkken "Mail ile gönder" düğmesine basıp onayladığında,
+2) /sifremi-unuttum: şifre yenileme linki; yalnızca sabit kurtarma adresine (auth.KURTARMA_MAIL), sıklık sınırlı.
+Zamanlayıcılar, mail okuma ve Claude'un anahtarlı yazma ucu bu modülü kullanmaz. Gönderilen mail Gönderilmiş Öğeler'e kaydedilir.
 """
 import re
 from xml.sax.saxutils import escape

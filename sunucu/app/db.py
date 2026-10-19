@@ -44,7 +44,11 @@ def init():
         CREATE TABLE IF NOT EXISTS docs (collection TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL,
             updated_at TEXT NOT NULL, PRIMARY KEY (collection, id));
         CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, body TEXT NOT NULL, created_at TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS kimlik (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         """)
+        cols = [r[1] for r in c.execute("PRAGMA table_info(sessions)")]
+        if "kalici" not in cols:  # "Beni hatırla" oturumları
+            c.execute("ALTER TABLE sessions ADD COLUMN kalici INTEGER NOT NULL DEFAULT 0")
         # 20 Ekim 2026 (Emre Bey'in isteği, bütçe): otomatik kontrol yok; eski varsayılan takvim boşaltılır.
         c.execute("UPDATE settings SET value='' WHERE key='takvim' AND value='08:30=sabah;13:00=ara;17:00=ara'")
 
@@ -106,9 +110,9 @@ def prune_reports(keep_days=90):
 
 
 # Oturumlar ve giriş denemeleri
-def session_create(sid, ip, now):
+def session_create(sid, ip, now, kalici=False):
     with _lock, _conn() as c:
-        c.execute("INSERT INTO sessions(id, created_at, last_seen, ip) VALUES(?,?,?,?)", (sid, now, now, ip))
+        c.execute("INSERT INTO sessions(id, created_at, last_seen, ip, kalici) VALUES(?,?,?,?,?)", (sid, now, now, ip, 1 if kalici else 0))
 
 
 def session_get(sid):
@@ -190,3 +194,20 @@ def push_add(sub):
 def push_remove(endpoint):
     with _lock, _conn() as c:
         c.execute("DELETE FROM push_subs WHERE endpoint=?", (endpoint,))
+
+
+# Giriş bilgileri (kullanıcı adı, şifre özeti, kurtarma maili, şifre sıfırlama jetonu). Ayarlar sayfasından ayrı tutulur.
+def kimlik_get(key, default=""):
+    with _conn() as c:
+        r = c.execute("SELECT value FROM kimlik WHERE key=?", (key,)).fetchone()
+    return r[0] if r else default
+
+
+def kimlik_set(key, value):
+    with _lock, _conn() as c:
+        c.execute("INSERT INTO kimlik(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, value))
+
+
+def kimlik_del(key):
+    with _lock, _conn() as c:
+        c.execute("DELETE FROM kimlik WHERE key=?", (key,))
