@@ -1,18 +1,20 @@
 """Emre'nin Asistanı: mail raporları web uygulaması (Railway)."""
 import hmac
+import html as _html
 import logging
 import os
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import ajanda as ajanda_mod, auth, db, jobs
+from . import ajanda as ajanda_mod, auth, db, ews_gonder, jobs
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+log = logging.getLogger("ea.main")
 TZ = ZoneInfo("Europe/Istanbul")
 SECURE = os.environ.get("COOKIE_INSECURE") != "1"  # yerel test dışında çerez yalnızca https
 
@@ -319,6 +321,68 @@ async def api_claude_set(request: Request, col: str, doc_id: str):
         return PlainTextResponse("Kayıt bir nesne olmalı", status_code=400)
     db.doc_set(col, doc_id, body)
     return Response(status_code=204)
+
+
+def _tr_tarih(s):
+    return "%s.%s.%s" % (s[8:10], s[5:7], s[:4]) if s and len(s) >= 10 else "—"
+
+
+def _gorev_mail_html(g, imza):
+    e = lambda s: _html.escape(str(s or "")).replace("\n", "<br>")
+    rows = [("İş", g.get("baslik")), ("Detay", g.get("detay")), ("Birim", g.get("birim")),
+            ("Veriliş tarihi", _tr_tarih(g.get("verilisTarihi", ""))),
+            ("Bitiş tarihi", _tr_tarih(g.get("bitisTarihi", "")) + ((" " + g["saat"]) if g.get("saat") else ""))]
+    if g.get("oncelik") == "yuksek":
+        rows.append(("Öncelik", "Yüksek"))
+    ek = [x for x in (g.get("ekGorevler") or []) if not x.get("done")]
+    tablo = "".join('<tr><td style="padding:4px 12px 4px 0;color:#5b6678;vertical-align:top">%s</td><td style="padding:4px 0">%s</td></tr>'
+                    % (e(k), e(v)) for k, v in rows if v)
+    ek_html = ("<p><b>Ek görevler</b></p><ul>%s</ul>" % "".join(
+        "<li>%s. görev: %s%s</li>" % (e(x.get("no")), e(x.get("metin")), (" · bitiş " + _tr_tarih(x["bitis"])) if x.get("bitis") else "")
+        for x in ek)) if ek else ""
+    return ('<div style="font:14px Calibri,Arial,sans-serif;color:#17202e">'
+            "<p>Merhaba %s,</p><p>Aşağıdaki işin takibini size iletiyorum.</p>"
+            '<table style="border-collapse:collapse;font:inherit">%s</table>%s'
+            "<p>Bitiş tarihine kadar sonucu bana bildirmenizi rica ederim.</p><p>Saygılarımla,<br>%s</p></div>"
+            % (e(g.get("kisi")), tablo, ek_html, e(imza)))
+
+
+@app.post("/api/gorev-mail/{doc_id}")
+async def gorev_mail(request: Request, doc_id: str):
+    """Görevi görevliye mail ile iletir. Yalnızca oturum + CSRF ile, sayfadaki "Gönder" düğmesinden."""
+    _, err = _api_guard(request, write=True)
+    if err:
+        return err
+    if not _check("gorevler", doc_id):
+        return PlainTextResponse("Geçersiz görev", status_code=400)
+    g = db.doc_get("gorevler", doc_id)
+    if not g:
+        return PlainTextResponse("Görev bulunamadı", status_code=404)
+    try:
+        to = str((await request.json()).get("to", "")).strip()
+    except ValueError:
+        return PlainTextResponse("Geçersiz istek", status_code=400)
+    if not ews_gonder.MAIL_RE.match(to):
+        return PlainTextResponse("Geçersiz mail adresi", status_code=400)
+    gecmis = g.get("mailGonderimleri") or []
+    simdi = datetime.now(timezone.utc)
+    if gecmis and (simdi - datetime.fromisoformat(gecmis[-1]["at"].replace("Z", "+00:00"))).total_seconds() < 60:
+        return PlainTextResponse("Bu görev az önce gönderildi; 1 dakika sonra tekrar deneyin.", status_code=429)
+    imza = db.get_settings().get("name") or "Emre ILIKKANLI"
+    konu = "Görev: %s · bitiş %s" % (g.get("baslik", ""), _tr_tarih(g.get("bitisTarihi", "")))
+    try:
+        ews = Ews(os.environ.get("EWS_HOST", ""), os.environ.get("EWS_USER", ""), os.environ.get("EWS_PASSWORD", ""))
+        ews_gonder.send(ews, to, konu, _gorev_mail_html(g, imza))
+    except (EwsError, ValueError) as ex:
+        log.warning("Görev maili gönderilemedi: %s", ex)
+        return PlainTextResponse("Mail gönderilemedi: %s" % ex, status_code=502)
+    at = simdi.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    g["kisiMail"] = to
+    g["mailGonderimleri"] = gecmis + [{"at": at, "to": to}]
+    g["updatedAt"] = at
+    db.doc_set("gorevler", doc_id, g)
+    log.info("Görev maili gönderildi: %s", doc_id)
+    return {"ok": True, "at": at, "to": to}
 
 
 @app.post("/ayarlar/ice-aktar")

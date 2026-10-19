@@ -23,8 +23,12 @@ window.EA_NO_PIN = true;
     return { docs: docs, size: docs.length, empty: !docs.length, docChanges: function () { return []; },
              metadata: { fromCache: false, hasPendingWrites: false } };
   }
-  function refresh(col) {
+  var last = {};
+  function refresh(col, force) {
     return api('GET', col).then(function (list) {
+      var key = JSON.stringify(list || []);
+      if (!force && last[col] === key) return;  // değişiklik yoksa ekranı yeniden çizme (yarım formlar silinmesin)
+      last[col] = key;
       (subs[col] || []).forEach(function (s) { s.next(snap(list || [])); });
     });
   }
@@ -58,7 +62,7 @@ window.EA_NO_PIN = true;
       onSnapshot: function (next, error) {
         var entry = { next: next, error: error };
         (subs[col] = subs[col] || []).push(entry);
-        refresh(col).catch(function (e) { if (error) error(e); });
+        refresh(col, true).catch(function (e) { if (error) error(e); });
         return function () { subs[col] = (subs[col] || []).filter(function (s) { return s !== entry; }); };
       }
     };

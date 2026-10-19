@@ -523,6 +523,12 @@
     state.gorevler.set(id, body); render();
     return write('gorevler/' + id, () => gorevRef(id).set(body));
   }
+  const kisiMail = kisi => {
+    let best = null;
+    for (const g of state.gorevler.values()) if (g.kisi === kisi && g.kisiMail && (!best || (g.updatedAt || '') > (best.updatedAt || ''))) best = g;
+    return best ? best.kisiMail : '';
+  };
+  const MAIL_RE = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/;
   const remind9 = date => { if (!date) return ''; const d = parse(date); d.setHours(9, 0, 0, 0); return d.toISOString(); };
   const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
   const isLate = g => g.durum === 'suruyor' && g.bitisTarihi && g.bitisTarihi < todayStr();
@@ -617,6 +623,7 @@
             <input type="text" id="gKisi" list="gKisiList" placeholder="Görevli kişi (ad soyad)" required maxlength="80" ${dis}>
             <input type="text" id="gBirim" list="gBirimList" placeholder="Birim (Operasyon, Bilet…)" maxlength="60" ${dis}>
           </div>
+          <input type="email" id="gMail" placeholder="Görevlinin maili (görevi mail ile iletmek için)" maxlength="120" autocomplete="off" ${dis}>
           <input type="text" id="gBaslik" placeholder="Takip edilecek iş" required maxlength="200" ${dis}>
           <textarea id="gDetay" placeholder="İşin detayı, beklenen sonuç" maxlength="4000" ${dis}></textarea>
           <div class="row">
@@ -684,6 +691,7 @@
         <div class="field"><span class="label">Görevli</span><input type="text" id="gdKisi" list="gKisiList2" value="${esc(g.kisi || '')}" maxlength="80"></div>
         <div class="field"><span class="label">Birim</span><input type="text" id="gdBirim" list="gBirimList2" value="${esc(g.birim || '')}" maxlength="60"></div>
       </div>
+      <div class="field"><span class="label">Görevlinin maili</span><input type="email" id="gdMail" value="${esc(g.kisiMail || kisiMail(g.kisi) || '')}" maxlength="120" autocomplete="off" placeholder="ad.soyad@cyprusroyal.com"></div>
       <datalist id="gKisiList2">${[...new Set([...state.gorevler.values()].map(x => x.kisi).filter(Boolean))].map(k => `<option value="${esc(k)}">`).join('')}</datalist>
       <datalist id="gBirimList2">${BIRIMLER.map(b => `<option value="${esc(b)}">`).join('')}</datalist>
       <div class="field"><span class="label">Takip edilecek iş</span><input type="text" id="gdBaslik" value="${esc(g.baslik || '')}" maxlength="200"></div>
@@ -695,6 +703,13 @@
       </div>
       <label class="check"><input type="checkbox" id="gdOncelik" ${g.oncelik === 'yuksek' ? 'checked' : ''}> Öncelikli</label>
       <div class="row"><button class="btn primary" type="button" data-gact="save">Değişiklikleri kaydet</button></div>
+
+      <div class="field"><span class="label">Görevi mail ile ilet</span>
+        ${window.EA_NO_PIN ? `<div class="row"><button class="btn primary" type="button" data-gact="mailGonder" ${state.mailSending ? 'disabled' : ''}>${state.mailSending ? 'Gönderiliyor…' : 'Mail ile gönder'}</button></div>
+        <p class="help">Görev, yukarıdaki adrese sizin şirket mailinizden gönderilir; basınca önce onayınız sorulur.</p>`
+        : '<p class="help">Mail ile gönderme yalnızca EA sitesindeki ajandada çalışır.</p>'}
+        ${(g.mailGonderimleri || []).length ? `<ul class="hist">${g.mailGonderimleri.map(m => `<li>✉️ ${esc(dateTime(m.at))} → ${esc(m.to)}</li>`).join('')}</ul>` : ''}
+      </div>
 
       <div class="field"><span class="label">Durum</span><div class="row">
         ${g.durum !== 'tamamlandi' ? '<button class="btn ok" type="button" data-gact="tamam">Tamamlandı</button>' : ''}
@@ -747,10 +762,29 @@
     if (act === 'save') {
       const baslik = val('gdBaslik'); if (!baslik) { document.getElementById('gdBaslik').focus(); return; }
       const bitis = val('gdBitis');
-      const patch = { kisi: val('gdKisi'), birim: val('gdBirim'), baslik, detay: val('gdDetay'), verilisTarihi: val('gdVerilis'),
+      const patch = { kisi: val('gdKisi'), kisiMail: val('gdMail'), birim: val('gdBirim'), baslik, detay: val('gdDetay'), verilisTarihi: val('gdVerilis'),
         saat: val('gdSaat'), oncelik: document.getElementById('gdOncelik').checked ? 'yuksek' : 'normal' };
       if (bitis !== (g.bitisTarihi || '')) Object.assign(patch, { bitisTarihi: bitis, remindAt: remind9(bitis), snoozedUntil: '', seenAt: '', notifiedAt: '' });
       saveGorev(id, patch); renderDrawer(); return;
+    }
+    if (act === 'mailGonder') {
+      if (!window.EA_NO_PIN || state.mailSending) return;
+      const to = val('gdMail');
+      if (!MAIL_RE.test(to)) { alert('Geçerli bir mail adresi yazın.'); document.getElementById('gdMail').focus(); return; }
+      if (!confirm('"' + (g.baslik || 'Görev') + '" görevi ' + to + ' adresine sizin mailinizden gönderilsin mi?')) return;
+      state.mailSending = true; renderDrawer();
+      const csrf = (document.querySelector('meta[name="csrf"]') || {}).content || '';
+      fetch('/api/gorev-mail/' + encodeURIComponent(id), { method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': csrf }, body: JSON.stringify({ to }) })
+        .then(r => r.ok ? r.json() : r.text().then(t => { throw new Error(t || ('HTTP ' + r.status)); }))
+        .then(res => {
+          const cur = state.gorevler.get(id) || g;
+          state.gorevler.set(id, { ...cur, kisiMail: res.to, mailGonderimleri: [...(cur.mailGonderimleri || []), { at: res.at, to: res.to }], updatedAt: res.at });
+          alert('Görev ' + res.to + ' adresine gönderildi.');
+        })
+        .catch(err => alert(err.message || 'Mail gönderilemedi.'))
+        .finally(() => { state.mailSending = false; render(); renderDrawer(); });
+      return;
     }
     if (act === 'tamam') { saveGorev(id, { durum: 'tamamlandi', tamamlanmaTarihi: todayStr() }); renderDrawer(); return; }
     if (act === 'surdur') { saveGorev(id, { durum: 'suruyor', tamamlanmaTarihi: '' }); renderDrawer(); return; }
@@ -1186,6 +1220,10 @@
     if (id === 'gfKisi') { gState.kisi = e.target.value; saveGFilter(); render(true); }
     else if (id === 'gfBirim') { gState.birim = e.target.value; saveGFilter(); render(true); }
     else if (id === 'gfPeriod') { gState.period = e.target.value; saveGFilter(); render(true); }
+    else if (id === 'gKisi' || id === 'gdKisi') {
+      const m = document.getElementById(id === 'gKisi' ? 'gMail' : 'gdMail');
+      if (m && !m.value.trim()) m.value = kisiMail(e.target.value.trim());
+    }
   });
   let qTimer;
   document.addEventListener('input', e => {
@@ -1202,7 +1240,7 @@
     if (!kisi || !baslik || !bitis) return;
     const id = 'g' + newId().slice(1);
     const now = new Date().toISOString();
-    const body = { id, kisi, birim: v('gBirim'), baslik, detay: v('gDetay'), verilisTarihi: v('gVerilis') || todayStr(),
+    const body = { id, kisi, kisiMail: v('gMail'), mailGonderimleri: [], birim: v('gBirim'), baslik, detay: v('gDetay'), verilisTarihi: v('gVerilis') || todayStr(),
       bitisTarihi: bitis, ilkBitisTarihi: bitis, durum: 'suruyor', tamamlanmaTarihi: '', oncelik: document.getElementById('gOncelik').checked ? 'yuksek' : 'normal',
       uzatmalar: [], ekGorevler: [], notlar: [], degerlendirme: { puan: 0, yorum: '', at: '' },
       remindAt: remind9(bitis), snoozedUntil: '', seenAt: '', notifiedAt: '', kaynak: 'elle', createdAt: now, updatedAt: now };
