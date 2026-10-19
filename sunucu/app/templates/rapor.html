@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block body %}
-{% from "_card.html" import pano %}
+{% from "_card.html" import pano %}{% from "_ikonlar.html" import ikon %}
 {% set aktif = 'rapor' %}{% include "_nav.html" %}
 {% if not r and guncelleniyor %}
   <div class="guncel on" role="status"><span class="spin"></span>Mailler şimdi kontrol ediliyor; rapor hazır olunca sayfa yenilenecek.</div>
@@ -24,14 +24,26 @@
 
 {% if d.bildirim %}<div class="note">{{ d.bildirim }}</div>{% endif %}
 
-<div class="pano">
-  {{ pano('p-vip', 'Önemli kişiler', 'Öncelikli kişilerin yazdığı ya da karıştığı konular', '★', 'violet', p.vip, links, r.id,
-          'Öncelikli kişilerden önemli gelişme yok.',
-          ((d.maili_olmayan_oncelikliler | join(' · ')) ~ ': bu dönemde mail yok.') if d.maili_olmayan_oncelikliler else '') }}
-  {{ pano('p-takip', 'Takip edilmesi gereken mailler', "Sizden cevap bekleyenler ve CC'de süren işler", '⏱', 'amber', p.takip, links, r.id, 'Takip gerektiren mail yok.') }}
-  {{ pano('p-ortak', 'Karşılıklı tartışmalar', 'Ortak adreslerde itiraz, ceza, no-show ve gerginlikler', '⇄', 'teal', p.ortak, links, r.id, 'Ortak maillerde öne çıkan tartışma yok.') }}
-  {{ pano('p-sikayet', 'Şikâyet mailleri', 'Misafir, acente ve rehber şikâyetleri, iade talepleri', '!', 'red', p.sikayet, links, r.id, 'Bu dönemde şikâyet yok.') }}
-  {{ pano('p-odeme', 'Ödeme mailleri', 'Otel ve acentelerden ödeme talepleri, son tarihler, giriş riski', '₺', 'orange', p.odeme, links, r.id, 'Ödeme talebi ya da giriş riski bildiren mail yok.') }}
+{% set bolumler = [
+  ('p-vip', 'vip', 'Önemli', 'Kişiler', 'Öncelikli kişilerin yazdığı ya da karıştığı konular', 'violet', p.vip, 'Öncelikli kişilerden önemli gelişme yok.'),
+  ('p-takip', 'takip', 'Takip', 'Edilecekler', "Sizden cevap bekleyenler ve CC'de süren işler", 'amber', p.takip, 'Takip gerektiren mail yok.'),
+  ('p-ortak', 'tartisma', 'Karşılıklı', 'Tartışmalar', 'Ortak adreslerde itiraz, ceza, no-show ve gerginlikler', 'teal', p.ortak, 'Ortak maillerde öne çıkan tartışma yok.'),
+  ('p-sikayet', 'sikayet', 'Şikâyet', 'Mailleri', 'Misafir, acente ve rehber şikâyetleri, iade talepleri', 'red', p.sikayet, 'Bu dönemde şikâyet yok.'),
+  ('p-odeme', 'odeme', 'Ödeme', 'Mailleri', 'Otel ve acentelerden ödeme talepleri, son tarihler, giriş riski', 'orange', p.odeme, 'Ödeme talebi ya da giriş riski bildiren mail yok.'),
+] %}
+<nav class="m-ikonlar" aria-label="Ana başlıklar">
+  {% for pid, slug, ust, ad, aciklama, renk, kartlar, bos in bolumler %}
+  <button class="uygulama {{ 'bos' if not kartlar }}" type="button" data-hedef="{{ pid }}" aria-controls="{{ pid }}" aria-expanded="false" style="--sira: {{ loop.index0 }}">
+    <span class="kap">{{ ikon(slug) }}{% if kartlar %}<span class="rozet">{{ kartlar|length }}</span>{% endif %}</span>
+    <span class="etiket"><small>{{ ust }}</small>{{ ad }}</span>
+  </button>
+  {% endfor %}
+</nav>
+<div class="m-paneller">
+  {% for pid, slug, ust, ad, aciklama, renk, kartlar, bos in bolumler %}
+  {{ pano(pid, ust ~ ' ' ~ ad|lower if ust != 'Önemli' else 'Önemli kişiler', aciklama, renk, kartlar, links, r.id, bos,
+          ((d.maili_olmayan_oncelikliler | join(' · ')) ~ ': bu dönemde mail yok.') if (slug == 'vip' and d.maili_olmayan_oncelikliler) else '') }}
+  {% endfor %}
 </div>
 
 {% if gun and not gun.bos %}
@@ -84,9 +96,28 @@
     document.addEventListener('visibilitychange', function () { if (!document.hidden) iste(); });
     window.addEventListener('pageshow', function (e) { if (e.persisted) iste(); });
   })();
-  // Sayıya tıklanınca: hedef kapalı bir açılır bölümse aç
-  function acHedef() { var t = location.hash && document.getElementById(location.hash.slice(1)); if (t && t.tagName === 'DETAILS') t.open = true; }
-  window.addEventListener('hashchange', acHedef); acHedef();
+  // Ana başlık ikonları: dokununca o başlığın mailleri ızgaranın altında açılır, yeniden dokununca kapanır
+  (function () {
+    var dugmeler = document.querySelectorAll('.m-ikonlar [data-hedef]');
+    function goster(pid, kaydir) {
+      dugmeler.forEach(function (b) {
+        var acik = b.dataset.hedef === pid;
+        b.setAttribute('aria-expanded', String(acik));
+        document.getElementById(b.dataset.hedef).hidden = !acik;
+      });
+      if (pid && kaydir) document.getElementById(pid).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    dugmeler.forEach(function (b) {
+      b.addEventListener('click', function () { goster(b.getAttribute('aria-expanded') === 'true' ? '' : b.dataset.hedef, true); });
+    });
+    document.querySelectorAll('[data-kapat]').forEach(function (k) { k.addEventListener('click', function () { goster('', false); }); });
+    function hash() {
+      var t = location.hash && document.getElementById(location.hash.slice(1));
+      if (t && t.classList.contains('m-panel')) goster(t.id, true);
+      else if (t && t.tagName === 'DETAILS') t.open = true;
+    }
+    window.addEventListener('hashchange', hash); hash();
+  })();
 </script>
 {% endif %}
 {% endblock %}

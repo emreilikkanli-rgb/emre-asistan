@@ -344,22 +344,30 @@ def ajanda(request: Request):
     jobs.ajanda_guncelle()  # "EA:" maillerini hemen işle; yeni kayıtlar sayfaya 5 sn içinde düşer
     head = ('<!doctype html><html lang="tr"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
-            '<meta name="robots" content="noindex, nofollow"><meta name="csrf" content="%s">'
+            '<meta name="robots" content="noindex, nofollow"><meta name="theme-color" content="#0b0a1a"><meta name="csrf" content="%s">'
             '<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}'
-            'body{margin:0;font:14px system-ui,-apple-system,sans-serif}[hidden]{display:none!important}'
-            '.ea-menu{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;justify-content:space-between;max-width:1240px;margin:0 auto;'
-            'padding:14px 16px 0;font:500 14px system-ui,-apple-system,sans-serif}'
-            '.ea-menu a{color:#5b6678;text-decoration:none;padding:6px 10px;border-radius:8px}'
-            '.ea-menu a:hover,.ea-menu a.on{background:#e9edf3;color:#17202e}'
-            '.ea-marka{display:flex;align-items:center;gap:10px;font-weight:700;color:#17202e!important;padding-left:0!important;background:none!important}'
-            '.ea-marka i{font-style:normal;width:30px;height:30px;border-radius:8px;background:#1f5fa8;color:#fff;display:grid;place-items:center;font-size:13px}'
-            '.ea-menu span{display:flex;flex-wrap:wrap;gap:4px}'
-            '@media (prefers-color-scheme:dark){.ea-menu a{color:#9aa6b8}.ea-menu a:hover,.ea-menu a.on{background:#212b38;color:#e7ebf2}.ea-marka{color:#e7ebf2!important}}'
+            'body{margin:0;background:#0b0a1a}[hidden]{display:none!important}'
+            '.ea-menu{position:relative;z-index:2;display:flex;gap:10px;align-items:center;justify-content:space-between;max-width:1240px;margin:0 auto;'
+            'padding:14px 16px 0;font:600 15px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}'
+            '.ea-marka{display:flex;align-items:center;gap:10px;color:#e8e5ff;text-decoration:none;white-space:nowrap}'
+            '.ea-marka i{font-style:normal;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;'
+            'background:conic-gradient(from 210deg,#7c6cff,#c06cff,#ff8f6c,#7c6cff);box-shadow:0 6px 20px rgba(124,108,255,.4)}'
+            '.ea-menu span{display:flex;gap:6px}'
+            '.ea-menu span a{width:38px;height:38px;border-radius:50%%;display:grid;place-items:center;color:#cfcaf0;background:rgba(255,255,255,.06);'
+            'border:1px solid rgba(255,255,255,.12);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}'
+            '.ea-menu span a:hover{background:rgba(255,255,255,.12);color:#fff}'
+            '.ea-menu span a.on{color:#fff;background:linear-gradient(135deg,#7c6cff,#c06cff);border-color:transparent}'
+            '.ea-menu svg{width:18px;height:18px}'
+            '@media (max-width:420px){.ea-marka{font-size:0;gap:0}}'
             '</style>'
             '<script src="/ajanda/kopru.js"></script></head><body>') % auth.csrf_token(sid)
+    ikon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">%s</svg>'
     menu = ('<nav class="ea-menu"><a class="ea-marka" href="/"><i>EA</i>Emre\'nin Asistanı</a><span>'
-            '<a class="on" href="/ajanda">Emre\'nin Ajandası</a><a href="/mailler">Emre\'nin Mailleri</a>'
-            '<a href="/ayarlar">Ayarlar</a></span></nav>')
+            '<a href="/" title="Ana ekran" aria-label="Ana ekran">' + ikon % '<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>' + '</a>'
+            '<a class="on" href="/ajanda" title="Emre\'nin Ajandası" aria-label="Emre\'nin Ajandası">' + ikon % '<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>' + '</a>'
+            '<a href="/mailler" title="Emre\'nin Mailleri" aria-label="Emre\'nin Mailleri">' + ikon % '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/>' + '</a>'
+            '<a href="/ayarlar" title="Ayarlar" aria-label="Ayarlar">' + ikon % '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/>' + '</a>'
+            '</span></nav>')
     return HTMLResponse(head + menu + _ajanda_html() + '</body></html>')
 
 

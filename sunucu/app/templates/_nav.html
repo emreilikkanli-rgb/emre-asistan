@@ -1,9 +1,10 @@
 <nav class="nav">
   <a class="brand" href="/"><i>EA</i>Emre'nin Asistanı</a>
   <div class="links">
-    <a href="/ajanda">Emre'nin Ajandası</a>
-    <a href="/mailler" class="{{ 'on' if aktif in ('rapor', 'raporlar') }}">Emre'nin Mailleri</a>
-    <a href="/ayarlar" class="{{ 'on' if aktif == 'ayarlar' }}">Ayarlar</a>
-    <form class="inline" method="post" action="/cikis"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit">Çıkış</button></form>
+    <a class="yuvarlak" href="/" title="Ana ekran" aria-label="Ana ekran"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg></a>
+    <a class="yuvarlak" href="/ajanda" title="Emre'nin Ajandası" aria-label="Emre'nin Ajandası"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></a>
+    <a class="yuvarlak {{ 'on' if aktif in ('rapor', 'raporlar') }}" href="/mailler" title="Emre'nin Mailleri" aria-label="Emre'nin Mailleri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg></a>
+    <a class="yuvarlak {{ 'on' if aktif == 'ayarlar' }}" href="/ayarlar" title="Ayarlar" aria-label="Ayarlar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></svg></a>
+    <form class="inline" method="post" action="/cikis"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="yuvarlak" type="submit" title="Çıkış" aria-label="Çıkış"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></button></form>
   </div>
 </nav>

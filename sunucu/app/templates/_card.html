@@ -32,17 +32,17 @@
   </li>
 {% endmacro %}
 
-{% macro pano(pid, baslik, aciklama, ikon, renk, kartlar, links, rid, bos, alt='') %}
-  <details class="p-card {{ 'bos' if not kartlar }}" id="{{ pid }}" style="--c: var(--{{ renk }}); --cbg: var(--{{ renk }}-bg)">
-    <summary class="p-head">
-      <span class="p-ikon" aria-hidden="true">{{ ikon }}</span>
+{# Bir ana başlığın mail listesi: ikona dokununca ikon ızgarasının altında açılır #}
+{% macro pano(pid, baslik, aciklama, renk, kartlar, links, rid, bos, alt='') %}
+  <section class="p-card m-panel" id="{{ pid }}" hidden style="--c: var(--{{ renk }}); --cbg: var(--{{ renk }}-bg)" aria-label="{{ baslik }}">
+    <header class="p-head">
       <span class="p-baslik"><b>{{ baslik }}</b><small>{{ aciklama }}</small></span>
       <span class="p-say">{{ kartlar|length }}</span>
-      <span class="p-ok" aria-hidden="true"></span>
-    </summary>
+      <button class="p-kapat" type="button" data-kapat aria-label="Kapat">✕</button>
+    </header>
     {% if kartlar %}
       <ul class="p-list">{% for c in kartlar %}{{ satir(c, links, rid) }}{% endfor %}</ul>
     {% else %}<p class="p-bos">{{ bos }}</p>{% endif %}
     {% if alt %}<p class="p-alt">{{ alt }}</p>{% endif %}
-  </details>
+  </section>
 {% endmacro %}
