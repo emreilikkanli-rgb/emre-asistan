@@ -1,0 +1,23 @@
+# Exchange (EWS) sunucu ayarları (şifre burada DEĞİL, macOS Anahtar Zinciri'nde durur)
+host = mail.ornek-sunucu.com
+user = ad.soyad@sirket.com
+keychain_service = sirket-mail-imap
+# Kaç saat geriye bakılsın (sabah özeti için 24 iyi bir değer)
+hours = 24
+# En fazla kaç mail taransın
+max = 4000
+# Adınız (Kime/CC içinde aranır)
+name = Ad SOYAD
+# Öncelikli kişiler (noktalı virgülle ayırın). "Ad Soyad" ya da "Ad @firma" (firma = mail alan adı)
+oncelikli = Ad Soyad; Ad @firma-alanadi; Diğer Kişi
+# Şikâyet sayılacak kelimeler (konu ve içerikte, tüm gelen kutusunda aranır)
+sikayet_kelimeleri = şikayet; şikâyet; complaint; memnuniyetsiz; memnun değil; memnun kalmadı; mağdur; rezalet; kabul edilemez; skandal; tazminat; kötü hizmet; berbat; iade talep; refund; sorun yaşa; problem yaşa; olumsuz deneyim; dissatisf; disappointed
+# Otellerden ödeme talepleri ve "ödeme yapılmazsa giriş alınmaz" uyarıları (tüm gelen kutusunda)
+odeme_kelimeleri = ödeme talebi; ödeme talep; ödeme hatırlatma; ödemenin yapılması; ödemenin gerçekleştirilmesi; ödeme yapılmadığı; ödeme yapılmaması; ödenmediği takdirde; ödeme alınmadan; ödeme gelmediği; ödemesi yapılmayan; ödeme bekl; giriş alınmayacak; girişi alınmayacak; girişleri alınmayacak; giriş yapılamayacak; giriş yapılmayacak; check in yapılmayacak; check-in yapılmayacak; konaklama yapılamayacak; kabul edilmeyecek; misafir kabul; ön ödeme; prepayment; payment reminder; payment request; outstanding; overdue; vadesi geçmiş; son ödeme tarihi; açık bakiye; ödenmemiş
+# Rehber şikâyeti: rehber kelimesi + olumsuz kelimelerden biri birlikte geçerse
+rehber_kelimeleri = rehber; rehberi; rehberimiz; guide; tur lideri
+rehber_olumsuz = şikayet; şikâyet; memnun; ilgisiz; ilgilenmedi; kaba; saygısız; geç kaldı; gelmedi; ulaşılamadı; davranış; tavır; sorun; problem; hata; mağdur; complaint
+# Ortak (grup) maillerde tartışma işaretleri
+tartisma_kelimeleri = kabul edilemez; kabul etmiyoruz; kabul etmemiz mümkün değil; itiraz; tekrar hatırlat; ikinci kez; defalarca; hala dönüş; hâlâ dönüş; halen dönüş; dönüş alamadık; dönüş sağlanmadı; yanıt alamadık; cevap alamadık; ısrarla; mağduriyet; mağdur; sorumluluk; no show; noshow; tazminat; hata yapılmış; yanlış bilgi; yanlış fiyat; yanlış rezervasyon; bilginiz dışında; sitem; üzülerek; anlaşılamadı
+# "Ajanda:" konulu mail gönderebilecek ek adresler (noktalı virgülle). Kendi şirket adresiniz zaten izinli.
+ajanda_gonderenler =

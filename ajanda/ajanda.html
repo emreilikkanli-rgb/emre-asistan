@@ -1,0 +1,1394 @@
+<title>Emre'nin Ajandası</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  /* Layout: sol sütunda mini takvim ve yaklaşanlar, sağda seçili görünüm (gün / hafta / ay / özel günler); dar ekranda tek sütun. */
+  :root {
+    --bg: #f3f5f8; --surface: #ffffff; --surface-2: #e9edf3; --line: #d6dce6;
+    --fg: #17202e; --muted: #5b6678; --accent: #2546a8; --accent-soft: #e3e9fb;
+    --gold: #9a6200; --gold-soft: #fbf0d9; --red: #b42318; --red-soft: #fdeceb;
+    --green: #1f7a4d; --green-soft: #e3f4ea; --violet: #6b3fc0; --violet-soft: #efe8fb;
+    --xmas: #a3122a; --xmas-soft: #fbe9ec;
+    --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10151d; --surface: #18202b; --surface-2: #212b38; --line: #2e3a4a;
+      --fg: #e7ebf2; --muted: #9aa6b8; --accent: #8aa6ff; --accent-soft: #1f2a4a;
+      --gold: #f0b54a; --gold-soft: #33280f; --red: #f4877b; --red-soft: #3a1c1a;
+      --green: #6fd19b; --green-soft: #15301f; --violet: #b99bff; --violet-soft: #2a2140;
+      --xmas: #ff8fa0; --xmas-soft: #3a1820; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10151d; --surface: #18202b; --surface-2: #212b38; --line: #2e3a4a;
+    --fg: #e7ebf2; --muted: #9aa6b8; --accent: #8aa6ff; --accent-soft: #1f2a4a;
+    --gold: #f0b54a; --gold-soft: #33280f; --red: #f4877b; --red-soft: #3a1c1a;
+    --green: #6fd19b; --green-soft: #15301f; --violet: #b99bff; --violet-soft: #2a2140;
+    --xmas: #ff8fa0; --xmas-soft: #3a1820; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 60px; }
+  h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  /* Üst bar */
+  .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 16px; }
+  .top h1 { font-size: clamp(26px, 4vw, 36px); font-weight: 700; letter-spacing: -0.01em; }
+  .top .today { color: var(--muted); }
+  .views { display: flex; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 999px; flex-wrap: wrap; }
+  .views button { border: 0; background: transparent; padding: 6px 14px; border-radius: 999px; font-weight: 500; color: var(--muted); }
+  .views button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+
+  .status { padding: 10px 14px; border-radius: var(--radius); background: var(--gold-soft); color: var(--gold); margin-bottom: 14px; font-size: 14px; }
+
+  /* Hatırlatma bandı */
+  .alerts { display: grid; gap: 8px; margin-bottom: 16px; }
+  .alert { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; background: var(--red-soft); border: 1px solid color-mix(in srgb, var(--red) 35%, transparent);
+    border-radius: var(--radius); padding: 10px 14px; }
+  .alert .what { flex: 1 1 260px; min-width: 0; }
+  .alert .what b { display: block; }
+  .alert .what span { color: var(--muted); font-size: 13px; }
+  .alert .acts { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .btn { border: 1px solid var(--line); background: var(--surface); padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+  .btn.ok { background: var(--green-soft); border-color: transparent; color: var(--green); }
+  .btn.danger { color: var(--red); }
+  .btn.danger.armed { background: var(--red); color: var(--surface); border-color: var(--red); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+  .side { display: grid; gap: 16px; }
+  .panel h2 { font-size: 15px; font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .label { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+  /* Mini takvim */
+  .mini-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .mini-head b { font-family: var(--font-display); font-size: 16px; }
+  .icon-btn { border: 0; background: var(--surface-2); width: 30px; height: 30px; border-radius: 8px; font-size: 16px; line-height: 1; }
+  .mini { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; font-size: 13px; }
+  .mini .dow { color: var(--muted); font-size: 11px; font-weight: 600; padding-block: 4px; }
+  .mini button { border: 0; background: transparent; aspect-ratio: 1; border-radius: 8px; position: relative; font-variant-numeric: tabular-nums; max-width: 100%; }
+  .mini button.out { color: var(--muted); opacity: .5; }
+  .mini button.hol { color: var(--gold); font-weight: 600; }
+  .mini button.xmas { background: var(--xmas-soft); }
+  .mini button.today { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .mini button.sel { background: var(--accent); color: var(--surface); }
+  .mini button .dot { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+  .mini button.sel .dot { background: var(--surface); }
+
+  .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .list li { display: flex; gap: 10px; align-items: baseline; font-size: 14px; }
+  .list .d { flex: 0 0 64px; color: var(--muted); font-size: 12px; }
+  .list .t { min-width: 0; overflow-wrap: anywhere; }
+  .empty { color: var(--muted); font-size: 14px; }
+
+  /* Hızlı ekleme */
+  form.add { display: grid; gap: 10px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .row > * { flex: 1 1 120px; min-width: 0; }
+  input[type=text], input[type=date], input[type=time], input[type=datetime-local], select, textarea {
+    width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 10px; }
+  textarea { resize: vertical; min-height: 64px; }
+  .check { display: flex; align-items: center; gap: 6px; font-size: 14px; flex: 0 0 auto; }
+
+  /* Ana alan */
+  .main { display: grid; gap: 16px; min-width: 0; }
+  .main-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+  .main-head h2 { font-size: 22px; font-weight: 700; }
+  .nav { display: flex; gap: 6px; }
+
+  .hol-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    background: var(--gold-soft); color: var(--gold); }
+  .hol-chip.xmas { background: var(--xmas-soft); color: var(--xmas); }
+  .hol-chip.dini { background: var(--green-soft); color: var(--green); }
+  .hol-chip.kktc { background: var(--violet-soft); color: var(--violet); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .items { display: grid; gap: 8px; }
+  .item { display: flex; gap: 10px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+  .item.done .title { text-decoration: line-through; color: var(--muted); }
+  .item.high { border-left: 4px solid var(--red); }
+  .item input[type=checkbox] { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--green); flex: 0 0 auto; }
+  .item .body { flex: 1; min-width: 0; text-align: left; border: 0; background: transparent; padding: 0; }
+  .item .title { font-weight: 600; overflow-wrap: anywhere; }
+  .item .note { color: var(--muted); font-size: 13px; margin-top: 2px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .item .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .tag { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .tag.rem { background: var(--red-soft); color: var(--red); }
+  .tag.src { background: var(--accent-soft); color: var(--accent); }
+  .tag.type-not { background: var(--violet-soft); color: var(--violet); }
+  .tag.late { background: var(--red); color: var(--surface); }
+  .time { flex: 0 0 auto; color: var(--muted); font-size: 13px; padding-top: 1px; }
+
+  .plan { display: grid; gap: 6px; }
+  .plan textarea { min-height: 96px; }
+  .plan .saved { font-size: 12px; color: var(--muted); }
+
+  /* Hafta görünümü */
+  .week { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .day-col { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+  .day-col.is-today { border-color: var(--accent); }
+  .day-col header { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+  .day-col header button { border: 0; background: transparent; padding: 0; font-family: var(--font-display); font-weight: 700; font-size: 15px; }
+  .mini-item { border: 0; text-align: left; background: var(--surface-2); border-radius: 6px; padding: 4px 8px; font-size: 13px; overflow-wrap: anywhere; }
+  .mini-item.done { text-decoration: line-through; color: var(--muted); }
+  .mini-item.high { box-shadow: inset 3px 0 0 var(--red); }
+
+  /* Ay görünümü */
+  .month-wrap { overflow-x: auto; }
+  .month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; min-width: 0; }
+  .month .dow { font-size: 12px; font-weight: 600; color: var(--muted); padding: 4px 6px; }
+  .cell { min-height: 108px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; gap: 3px; text-align: left; min-width: 0; }
+  .cell.out { opacity: .45; }
+  .cell.is-today { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .cell.xmas { background: linear-gradient(var(--xmas-soft), var(--surface)); }
+  .cell .n { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 13px; }
+  .cell .h { font-size: 11px; color: var(--gold); font-weight: 600; line-height: 1.25; }
+  .cell .h.dini { color: var(--green); }
+  .cell .h.kktc { color: var(--violet); }
+  .cell .h.xmas { color: var(--xmas); }
+  .cell .e { font-size: 12px; background: var(--accent-soft); color: var(--accent); border-radius: 4px; padding: 1px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cell .e.done { text-decoration: line-through; opacity: .6; }
+  .cell .more { font-size: 11px; color: var(--muted); }
+  @media (max-width: 640px) {
+    .cell { min-height: 58px; padding: 4px; }
+    .cell .h, .cell .e { display: none; }
+    .cell .dots { display: flex; gap: 3px; flex-wrap: wrap; }
+  }
+  .cell .dots { display: none; }
+  .cell .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .cell .dots i.h { background: var(--gold); }
+
+  /* Özel günler */
+  .special { display: grid; gap: 18px; }
+  .special section h3 { font-size: 16px; margin-bottom: 8px; }
+  .special ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .special li { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+  .special li .when { flex: 0 0 150px; font-size: 13px; color: var(--muted); }
+  .special li .nm { flex: 1 1 200px; min-width: 0; font-weight: 500; }
+  .special li small { color: var(--muted); display: block; font-weight: 400; }
+
+  /* Detay paneli */
+  .overlay { position: fixed; inset: 0; background: rgb(10 15 25 / .45); display: flex; justify-content: flex-end; z-index: 20; }
+  .drawer { width: min(460px, 100%); height: 100%; background: var(--surface); padding: 20px 16px calc(24px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; display: grid; gap: 14px; align-content: start;
+    padding-top: calc(20px + env(safe-area-inset-top, 0px)); }
+  .drawer h3 { font-size: 20px; }
+  .drawer .field { display: grid; gap: 4px; }
+  .notes { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+  .notes li { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; font-size: 14px; overflow-wrap: anywhere; }
+  .notes li time { display: block; font-size: 11px; color: var(--muted); }
+  .help { font-size: 13px; color: var(--muted); }
+  .help code { font-family: var(--font-mono); font-size: 12px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+  /* PIN kilidi: kilitliyken sayfanın tamamını kapatır */
+  .lock { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: grid; place-items: center; padding-inline: 16px;
+    padding-block: calc(24px + env(safe-area-inset-top, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; }
+  .lock-box { width: min(360px, 100%); display: grid; gap: 12px; text-align: center; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 28px 22px; }
+  .lock-mark { width: 64px; height: 64px; margin: 0 auto; border-radius: 16px; background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #000));
+    color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 26px; display: grid; place-items: center; }
+  .lock-box h2 { font-size: 20px; }
+  .lock-box input { text-align: center; font-size: 22px; letter-spacing: .3em; font-family: var(--font-mono); }
+  .lock-msg { min-height: 1.4em; margin: 0; color: var(--red); font-size: 14px; }
+  body.locked .wrap, body.locked .overlay { visibility: hidden; }
+
+  /* Görevler */
+  .g-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .g-tools select, .g-tools input[type=search] { width: auto; flex: 1 1 150px; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 10px; }
+  .seg { display: flex; flex-wrap: wrap; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 999px; }
+  .seg button { border: 0; background: transparent; padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+  .seg b { font-variant-numeric: tabular-nums; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+  .tile b { display: block; font-family: var(--font-display); font-size: 24px; font-variant-numeric: tabular-nums; }
+  .tile span { font-size: 12px; color: var(--muted); }
+  .tile.late b { color: var(--red); }
+  .tile.ok b { color: var(--green); }
+  .gcard { display: grid; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius); padding: 10px 12px; text-align: left; width: 100%; }
+  .gcard.late { border-left-color: var(--red); }
+  .gcard.ok { border-left-color: var(--green); opacity: .85; }
+  .gcard.cancel { border-left-color: var(--line); opacity: .6; }
+  .gcard .gtop { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
+  .gcard .who { font-family: var(--font-display); font-weight: 700; font-size: 16px; }
+  .gcard .ttl { font-weight: 600; overflow-wrap: anywhere; }
+  .gcard .det { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .st { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .st.late { background: var(--red); color: var(--surface); }
+  .st.today { background: var(--gold-soft); color: var(--gold); }
+  .st.ok { background: var(--green-soft); color: var(--green); }
+  .tag.birim { background: var(--violet-soft); color: var(--violet); }
+  .stars { color: var(--gold); letter-spacing: 1px; }
+  .rep-wrap { overflow-x: auto; }
+  table.rep { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 620px; }
+  table.rep th, table.rep td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; }
+  table.rep th { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  table.rep th:first-child, table.rep td:first-child { text-align: left; }
+  table.rep td button { border: 0; background: transparent; padding: 0; font-weight: 600; color: var(--accent); }
+  .bar { height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; min-width: 60px; }
+  .bar i { display: block; height: 100%; background: var(--green); }
+  details.newg > summary { cursor: pointer; list-style: none; }
+  details.newg > summary::-webkit-details-marker { display: none; }
+  .hist { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: 14px; }
+  .hist li { background: var(--surface-2); border-radius: 8px; padding: 6px 10px; overflow-wrap: anywhere; }
+  .hist li.done { text-decoration: line-through; color: var(--muted); }
+  .hist label { display: flex; gap: 8px; align-items: flex-start; }
+  .starbtn { border: 0; background: transparent; font-size: 26px; line-height: 1; color: var(--line); padding: 0 2px; }
+  .starbtn.on { color: var(--gold); }
+  .cell .e.g { background: var(--violet-soft); color: var(--violet); }
+  .mini-item.g { background: var(--violet-soft); color: var(--violet); }
+  @media (prefers-reduced-motion: no-preference) { .alert { animation: pulse 2.4s ease-in-out 2; } }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--red) 18%, transparent); } }
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Emre'nin Ajandası</h1>
+      <div class="today" id="todayLabel"></div>
+    </div>
+    <button class="btn" type="button" id="lockBtn" hidden title="Ajandayı kilitle">🔒 Kilitle</button>
+    <div class="views" role="group" aria-label="Görünüm">
+      <button type="button" data-view="gun" aria-pressed="true">Gün</button>
+      <button type="button" data-view="hafta" aria-pressed="false">Hafta</button>
+      <button type="button" data-view="ay" aria-pressed="false">Ay</button>
+      <button type="button" data-view="gorevler" aria-pressed="false">Görevler</button>
+      <button type="button" data-view="ozel" aria-pressed="false">Özel günler</button>
+    </div>
+  </div>
+
+  <div class="status" id="status">Ajanda yükleniyor…</div>
+  <div class="alerts" id="alerts" aria-live="polite"></div>
+
+  <div class="grid">
+    <aside class="side">
+      <div class="panel">
+        <div class="mini-head">
+          <button class="icon-btn" type="button" id="miniPrev" aria-label="Önceki ay">‹</button>
+          <b id="miniTitle"></b>
+          <button class="icon-btn" type="button" id="miniNext" aria-label="Sonraki ay">›</button>
+        </div>
+        <div class="mini" id="mini"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Yeni kayıt</h2>
+        <form class="add" id="addForm">
+          <input type="text" id="fTitle" placeholder="Görev veya not başlığı" required maxlength="200">
+          <div class="row">
+            <input type="text" id="fKisi" list="fKisiList" placeholder="Görevlendirilen kişi" maxlength="80" aria-label="Görevlendirilen kişi">
+            <input type="text" id="fBirim" list="fBirimList" placeholder="Birim" maxlength="60" aria-label="Birim">
+          </div>
+          <datalist id="fKisiList"></datalist>
+          <datalist id="fBirimList"></datalist>
+          <p class="help" id="fKisiHelp" style="margin:0">Kişi boşsa kayıt sizin işiniz olarak kalır; kişi yazarsanız o kişiye verilen görev olarak Görevler'de takip edilir.</p>
+          <div class="row">
+            <select id="fType" aria-label="Tür">
+              <option value="gorev">Görev</option>
+              <option value="toplanti">Toplantı</option>
+              <option value="not">Not</option>
+            </select>
+            <input type="date" id="fDate" aria-label="Tarih" required>
+          </div>
+          <div class="row">
+            <input type="time" id="fTime" aria-label="Saat">
+            <select id="fRemind" aria-label="Hatırlatma">
+              <option value="">Hatırlatma yok</option>
+              <option value="0">Saatinde hatırlat</option>
+              <option value="15">15 dk önce</option>
+              <option value="60">1 saat önce</option>
+              <option value="1440">1 gün önce</option>
+              <option value="morning">O gün 09:00</option>
+            </select>
+          </div>
+          <textarea id="fNote" placeholder="Not (isteğe bağlı)" maxlength="4000"></textarea>
+          <div class="row">
+            <label class="check"><input type="checkbox" id="fHigh"> Öncelikli</label>
+            <button class="btn primary" type="submit" id="fSave">Ajandaya ekle</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Yaklaşan hatırlatmalar</h2>
+        <ul class="list" id="upcoming"></ul>
+      </div>
+
+      <div class="panel">
+        <h2>Yaklaşan görev bitişleri</h2>
+        <ul class="list" id="upGorev"></ul>
+      </div>
+
+      <div class="panel">
+        <h2>Yaklaşan özel günler</h2>
+        <ul class="list" id="upHol"></ul>
+      </div>
+
+      <div class="panel help">
+        <h2>Ajandaya nasıl eklenir?</h2>
+        <p><b>Claude'a yazın:</b> "25 Ekim 10:00 otel toplantısı, 1 saat önce hatırlat" gibi.</p>
+        <p><b>Mail ile:</b> şirket adresinizden kendinize gönderin. Konu: <code>EA: 22.10 11:00 acente toplantıları</code> ya da <code>EA: yarın otel ödemesini takip et</code>. Gövdeye isterseniz <code>Hatırlat: 1 saat önce</code>, <code>Öncelik: yüksek</code>, <code>Not: …</code> yazın; birden çok iş için her satırı <code>-</code> ile başlatın.</p>
+        <p><b>Görev vermek:</b> Claude'a "Yeni görev iletiyorum: Ali Yılmaz, Operasyon, voucher kontrolleri, bitiş 25.10" yazın ya da söyleyin.</p>
+        <p><b>WhatsApp'tan:</b> mesajı kopyalayın, yeni maile yapıştırın, konuya <code>EA:</code> ile başlayan kısa bir başlık yazıp kendinize gönderin.</p>
+        <p>Mailler 07:00–23:30 arası 30 dakikada bir eklenir; eklenince bildirim gelir.</p>
+      </div>
+    </aside>
+
+    <main class="main" id="main"></main>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" hidden></div>
+
+<div class="lock" id="lock" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+  <form class="lock-box" id="lockForm" autocomplete="off">
+    <div class="lock-mark" aria-hidden="true">EA</div>
+    <h2 id="lockTitle">Emre'nin Ajandası</h2>
+    <p class="help" id="lockHelp">Ajanda açılıyor…</p>
+    <input type="password" id="lockPin" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="PIN" aria-label="PIN" autocomplete="off">
+    <div id="lockPin2Row" hidden><input type="password" id="lockPin2" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="PIN (tekrar)" aria-label="PIN tekrar" autocomplete="off"></div>
+    <button class="btn primary" type="submit">Aç</button>
+    <p class="lock-msg" id="lockMsg" aria-live="polite"></p>
+    <p class="help">PIN'inizi unutursanız Claude'a "Ajanda PIN'imi sıfırla" deyin; kayıtlarınız silinmez.</p>
+  </form>
+</div>
+
+<script>
+(() => {
+  document.body.classList.add('locked');
+  // ---------- Tarih yardımcıları ----------
+  const AYLAR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  const GUNLER = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+  const KISA = ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+  const pad = n => String(n).padStart(2, '0');
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const monday = d => addDays(d, -((d.getDay() + 6) % 7));
+  const longDate = d => `${d.getDate()} ${AYLAR[d.getMonth()]} ${d.getFullYear()}, ${GUNLER[d.getDay()]}`;
+  const shortDate = d => `${d.getDate()} ${AYLAR[d.getMonth()].slice(0, 3)}`;
+  const hm = iso => { const d = new Date(iso); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  const dateTime = iso => { const d = new Date(iso); return `${shortDate(d)} ${hm(iso)}`; };
+  const todayStr = () => ymd(new Date());
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const newId = () => 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  // ---------- Özel günler ----------
+  // tür: resmi (Türkiye), kktc (KKTC'ye özgü), dini, ozel (anma/kutlama), xmas (Christmas & yılbaşı dönemi)
+  const H = [];
+  const add = (date, name, kind, note) => H.push({ date, name, kind, note: note || '' });
+  const span = (from, to, name, kind, note) => { for (let d = parse(from); ymd(d) <= to; d = addDays(d, 1)) add(ymd(d), name, kind, note); };
+  for (const y of [2026, 2027]) {
+    add(`${y}-01-01`, 'Yılbaşı', 'resmi', 'TR ve KKTC resmî tatil');
+    add(`${y}-02-14`, 'Sevgililer Günü', 'ozel');
+    add(`${y}-03-08`, 'Dünya Kadınlar Günü', 'ozel');
+    add(`${y}-04-23`, 'Ulusal Egemenlik ve Çocuk Bayramı', 'resmi', 'TR ve KKTC resmî tatil');
+    add(`${y}-05-01`, 'Emek ve Dayanışma Günü', 'resmi', 'TR ve KKTC resmî tatil');
+    add(`${y}-05-19`, 'Atatürk\'ü Anma, Gençlik ve Spor Bayramı', 'resmi', 'TR ve KKTC resmî tatil');
+    add(`${y}-07-15`, 'Demokrasi ve Millî Birlik Günü', 'resmi', 'TR resmî tatil');
+    add(`${y}-07-20`, 'Barış ve Özgürlük Bayramı', 'kktc', 'KKTC resmî tatil');
+    add(`${y}-08-01`, 'TMT\'nin Kuruluşu / Toplumsal Direniş Bayramı', 'kktc', 'KKTC resmî tatil');
+    add(`${y}-08-30`, 'Zafer Bayramı', 'resmi', 'TR ve KKTC resmî tatil');
+    add(`${y}-10-28`, 'Cumhuriyet Bayramı arifesi', 'resmi', 'TR: yarım gün');
+    add(`${y}-10-29`, 'Cumhuriyet Bayramı', 'resmi', 'TR ve KKTC resmî tatil');
+    add(`${y}-11-10`, 'Atatürk\'ü Anma Günü', 'ozel');
+    add(`${y}-11-15`, 'KKTC Cumhuriyet Bayramı', 'kktc', 'KKTC resmî tatil');
+    add(`${y}-11-24`, 'Öğretmenler Günü', 'ozel');
+    span(`${y}-12-21`, `${y}-12-25`, 'Millî Mücadele ve Şehitler Haftası', 'kktc', 'KKTC anma haftası');
+    span(`${y}-12-20`, `${y}-12-23`, 'Christmas & yılbaşı sezonu', 'xmas', 'Avrupa ve İngiltere pazarında yoğun dönem');
+    add(`${y}-12-24`, 'Noel Arifesi (Christmas Eve)', 'xmas');
+    add(`${y}-12-25`, 'Noel (Christmas Day)', 'xmas', 'Avrupa ve İngiltere pazarında tatil');
+    add(`${y}-12-26`, 'Boxing Day', 'xmas', 'İngiltere\'de tatil');
+    span(`${y}-12-27`, `${y}-12-30`, 'Christmas & yılbaşı sezonu', 'xmas', 'Yılbaşı konaklamaları, gala geceleri');
+    add(`${y}-12-31`, 'Yılbaşı Gecesi', 'xmas', 'Gala ve yılbaşı programları');
+  }
+  span('2026-01-02', '2026-01-06', 'Christmas & yılbaşı sezonu', 'xmas', 'Sezon 6 Ocak\'ta kapanır');
+  span('2027-01-02', '2027-01-06', 'Christmas & yılbaşı sezonu', 'xmas', 'Sezon 6 Ocak\'ta kapanır');
+  // Paskalya ve günlere bağlı kutlamalar
+  add('2026-04-05', 'Paskalya (Batı)', 'ozel', 'Avrupa pazarında uzun tatil');
+  add('2026-04-12', 'Paskalya (Ortodoks)', 'ozel', 'Güney Kıbrıs ve Yunanistan\'da tatil');
+  add('2027-03-28', 'Paskalya (Batı)', 'ozel', 'Avrupa pazarında uzun tatil');
+  add('2027-05-02', 'Paskalya (Ortodoks)', 'ozel', 'Güney Kıbrıs ve Yunanistan\'da tatil');
+  add('2026-05-10', 'Anneler Günü', 'ozel');
+  add('2027-05-09', 'Anneler Günü', 'ozel');
+  add('2026-06-21', 'Babalar Günü', 'ozel');
+  add('2027-06-20', 'Babalar Günü', 'ozel');
+  // Dinî bayramlar ve kandiller (2027 tarihleri tahminîdir; Diyanet takvimiyle teyit edin)
+  add('2026-01-15', 'Miraç Kandili', 'dini');
+  add('2026-02-02', 'Berat Kandili', 'dini');
+  add('2026-02-19', 'Ramazan başlangıcı', 'dini');
+  add('2026-03-16', 'Kadir Gecesi', 'dini');
+  add('2026-03-19', 'Ramazan Bayramı arifesi', 'dini', 'TR: yarım gün');
+  span('2026-03-20', '2026-03-22', 'Ramazan Bayramı', 'dini', 'TR ve KKTC resmî tatil');
+  add('2026-05-26', 'Kurban Bayramı arifesi', 'dini', 'TR: yarım gün');
+  span('2026-05-27', '2026-05-30', 'Kurban Bayramı', 'dini', 'TR ve KKTC resmî tatil');
+  add('2026-06-16', 'Hicri Yılbaşı', 'dini');
+  add('2026-08-24', 'Mevlid Kandili', 'dini', 'KKTC\'de resmî tatil');
+  add('2027-02-08', 'Ramazan başlangıcı (tahmini)', 'dini');
+  add('2027-03-08', 'Ramazan Bayramı arifesi (tahmini)', 'dini');
+  span('2027-03-09', '2027-03-11', 'Ramazan Bayramı (tahmini)', 'dini', 'TR ve KKTC resmî tatil');
+  add('2027-05-15', 'Kurban Bayramı arifesi (tahmini)', 'dini');
+  span('2027-05-16', '2027-05-19', 'Kurban Bayramı (tahmini)', 'dini', 'TR ve KKTC resmî tatil');
+  add('2027-08-13', 'Mevlid Kandili (tahmini)', 'dini', 'KKTC\'de resmî tatil');
+  const holByDate = new Map();
+  for (const h of H) { if (!holByDate.has(h.date)) holByDate.set(h.date, []); holByDate.get(h.date).push(h); }
+  const holKindClass = k => k === 'xmas' ? 'xmas' : k === 'dini' ? 'dini' : k === 'kktc' ? 'kktc' : '';
+
+  // ---------- Durum ----------
+  const state = {
+    view: 'gun', cursor: todayStr(), miniMonth: todayStr().slice(0, 7),
+    items: new Map(), plans: new Map(), gorevler: new Map(), db: null, ready: false, openId: null, openGorev: null, armedDelete: false,
+  };
+  try { const v = localStorage.getItem('ajanda.view'); if (['gun', 'hafta', 'ay', 'gorevler', 'ozel'].includes(v)) state.view = v; } catch (e) {}
+
+  const $ = s => document.querySelector(s);
+  const statusEl = $('#status');
+  const setStatus = (msg) => { statusEl.textContent = msg || ''; statusEl.hidden = !msg; };
+
+  // Aynı dokümana tek seferde bir yazma.
+  const queues = new Map();
+  function write(path, fn) {
+    const prev = queues.get(path) || Promise.resolve();
+    const next = prev.then(fn).catch(e => {
+      setStatus(e && e.code === 'quota_exceeded' ? 'Ajanda dolu: eski kayıtları silin.' : 'Kayıt yapılamadı, internet bağlantınızı kontrol edip tekrar deneyin.');
+    });
+    queues.set(path, next);
+    return next;
+  }
+  const itemRef = id => state.db.collection('items').doc(id);
+  const planRef = key => state.db.collection('plans').doc(key);
+  function saveItem(id, patch) {
+    const cur = state.items.get(id);
+    if (!cur || !state.db) return;
+    const body = { ...cur, ...patch, updatedAt: new Date().toISOString() };
+    state.items.set(id, body); render();
+    return write('items/' + id, () => itemRef(id).set(body));
+  }
+
+  // ---------- Hatırlatma mantığı ----------
+  const nextRemind = it => {
+    if (!it.remindAt) return null;
+    return it.snoozedUntil && it.snoozedUntil > it.remindAt ? it.snoozedUntil : it.remindAt;
+  };
+  const isDue = (it, now) => {
+    const r = nextRemind(it);
+    if (it.done || !r || Date.parse(r) > now) return false;
+    return !(it.seenAt && it.seenAt >= r);
+  };
+  function snooze(id, kind) {
+    const now = new Date();
+    let t;
+    if (kind === '15') t = new Date(now.getTime() + 15 * 60000);
+    else if (kind === '60') t = new Date(now.getTime() + 60 * 60000);
+    else if (kind === '180') t = new Date(now.getTime() + 180 * 60000);
+    else if (kind === 'yarin') { t = addDays(now, 1); t.setHours(9, 0, 0, 0); }
+    else if (kind === 'pzt') { t = addDays(monday(now), 7); t.setHours(9, 0, 0, 0); }
+    if (!t) return;
+    saveItem(id, { snoozedUntil: t.toISOString(), seenAt: '', notifiedAt: '' });
+  }
+  function computeRemind(date, time, rule) {
+    if (rule === '') return '';
+    if (rule === 'morning') { const d = parse(date); d.setHours(9, 0, 0, 0); return d.toISOString(); }
+    const [h, m] = (time || '09:00').split(':').map(Number);
+    const d = parse(date); d.setHours(h, m, 0, 0);
+    return new Date(d.getTime() - Number(rule) * 60000).toISOString();
+  }
+
+  // ---------- Görevler (kişilere verilen işler) ----------
+  const BIRIMLER = ['Operasyon', 'Bilet', 'Sales', 'Fiyatlandırma', 'Muhasebe', 'Outgoing', 'Incoming', 'Kültür', 'Transfer', 'Rezervasyon', 'Pazarlama', 'Yönetim', 'Diğer'];
+  const gState = { filter: 'suren', kisi: '', birim: '', q: '', period: 'tum' };
+  try { Object.assign(gState, JSON.parse(localStorage.getItem('ajanda.gfilter') || '{}'), { q: '' }); } catch (e) {}
+  const saveGFilter = () => { try { localStorage.setItem('ajanda.gfilter', JSON.stringify({ ...gState, q: '' })); } catch (e) {} };
+  const gorevRef = id => state.db.collection('gorevler').doc(id);
+  function saveGorev(id, patch) {
+    const cur = state.gorevler.get(id);
+    if (!cur || !state.db) return;
+    const body = { ...cur, ...patch, updatedAt: new Date().toISOString() };
+    state.gorevler.set(id, body); render();
+    return write('gorevler/' + id, () => gorevRef(id).set(body));
+  }
+  const remind9 = date => { if (!date) return ''; const d = parse(date); d.setHours(9, 0, 0, 0); return d.toISOString(); };
+  const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+  const isLate = g => g.durum === 'suruyor' && g.bitisTarihi && g.bitisTarihi < todayStr();
+  const onTime = g => g.durum === 'tamamlandi' && g.tamamlanmaTarihi && (!g.bitisTarihi || g.tamamlanmaTarihi <= g.bitisTarihi);
+  const stars = n => '★★★★★'.slice(0, n || 0) + '☆☆☆☆☆'.slice(0, 5 - (n || 0));
+  function gorevStatus(g) {
+    if (g.durum === 'tamamlandi') return { cls: 'ok', card: 'ok', text: 'Tamamlandı' + (g.tamamlanmaTarihi ? ' · ' + shortDate(parse(g.tamamlanmaTarihi)) : '') };
+    if (g.durum === 'iptal') return { cls: '', card: 'cancel', text: 'İptal' };
+    if (!g.bitisTarihi) return { cls: '', card: '', text: 'Sürüyor' };
+    const d = daysBetween(todayStr(), g.bitisTarihi);
+    if (d < 0) return { cls: 'late', card: 'late', text: `${-d} gün gecikti` };
+    if (d === 0) return { cls: 'today', card: '', text: 'Bitiş bugün' };
+    return { cls: '', card: '', text: `Sürüyor · ${d} gün kaldı` };
+  }
+  const gorevDue = (g, now) => {
+    if (g.durum !== 'suruyor') return false;
+    const r = nextRemind(g);
+    if (!r || Date.parse(r) > now) return false;
+    return !(g.seenAt && g.seenAt >= r);
+  };
+  const ekDue = (g, e) => g.durum === 'suruyor' && !e.done && e.bitis && e.bitis <= todayStr() && !e.seenAt;
+  function periodStart() {
+    const t = new Date();
+    if (gState.period === 'ay') return ymd(new Date(t.getFullYear(), t.getMonth(), 1));
+    if (gState.period === '3ay') return ymd(new Date(t.getFullYear(), t.getMonth() - 2, 1));
+    if (gState.period === 'yil') return `${t.getFullYear()}-01-01`;
+    return '';
+  }
+  const gorevBitisOn = date => [...state.gorevler.values()].filter(g => g.durum === 'suruyor' && g.bitisTarihi === date);
+
+  function gorevCard(g) {
+    const s = gorevStatus(g);
+    const ek = g.ekGorevler || [];
+    const ekDone = ek.filter(e => e.done).length;
+    const uz = (g.uzatmalar || []).length;
+    const puan = g.degerlendirme && g.degerlendirme.puan;
+    return `<button type="button" class="gcard ${s.card}" data-gact="open" data-gid="${esc(g.id)}">
+      <div class="gtop"><span class="who">${esc(g.kisi || 'Kişi belirtilmedi')}</span><span class="st ${s.cls}">${esc(s.text)}</span></div>
+      <div class="ttl">${esc(g.baslik)}</div>
+      ${g.detay ? `<div class="det">${esc(g.detay)}</div>` : ''}
+      <div class="meta" style="display:flex;flex-wrap:wrap;gap:6px">
+        ${g.birim ? `<span class="tag birim">${esc(g.birim)}</span>` : ''}
+        ${g.oncelik === 'yuksek' ? '<span class="tag rem">Öncelikli</span>' : ''}
+        <span class="tag">Verildi ${esc(g.verilisTarihi ? shortDate(parse(g.verilisTarihi)) : '—')} → Bitiş ${esc(g.bitisTarihi ? shortDate(parse(g.bitisTarihi)) : '—')}${g.saat ? ' ' + esc(g.saat) : ''}</span>
+        ${uz ? `<span class="tag">${uz} kez uzatıldı</span>` : ''}
+        ${ek.length ? `<span class="tag">Ek görev ${ekDone}/${ek.length}</span>` : ''}
+        ${puan ? `<span class="tag stars" title="Değerlendirme">${stars(puan)}</span>` : ''}
+        ${srcLabel[g.kaynak] ? `<span class="tag src">${esc(srcLabel[g.kaynak])}</span>` : ''}
+      </div>
+    </button>`;
+  }
+
+  function renderGorevler() {
+    const all = [...state.gorevler.values()];
+    const ps = periodStart();
+    const inPeriod = all.filter(g => !ps || (g.verilisTarihi || '') >= ps);
+    const kisiler = [...new Set(all.map(g => g.kisi).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
+    const birimler = [...new Set([...BIRIMLER, ...all.map(g => g.birim).filter(Boolean)])];
+    let list = inPeriod.filter(g => (!gState.kisi || g.kisi === gState.kisi) && (!gState.birim || g.birim === gState.birim));
+    if (gState.q) {
+      const q = gState.q.toLocaleLowerCase('tr');
+      list = list.filter(g => [g.kisi, g.baslik, g.detay, g.birim].join(' ').toLocaleLowerCase('tr').includes(q));
+    }
+    const cnt = {
+      suren: list.filter(g => g.durum === 'suruyor').length, geciken: list.filter(isLate).length,
+      tamam: list.filter(g => g.durum === 'tamamlandi').length, iptal: list.filter(g => g.durum === 'iptal').length, tum: list.length,
+    };
+    const match = g => gState.filter === 'tum' || (gState.filter === 'suren' && g.durum === 'suruyor') || (gState.filter === 'geciken' && isLate(g))
+      || (gState.filter === 'tamam' && g.durum === 'tamamlandi') || (gState.filter === 'iptal' && g.durum === 'iptal');
+    const shown = list.filter(match).sort((a, b) => (a.durum === 'suruyor' ? 0 : 1) - (b.durum === 'suruyor' ? 0 : 1)
+      || (a.durum === 'suruyor' ? (a.bitisTarihi || '9').localeCompare(b.bitisTarihi || '9') : (b.updatedAt || '').localeCompare(a.updatedAt || '')));
+    const tamam = list.filter(g => g.durum === 'tamamlandi');
+    const zamaninda = tamam.length ? Math.round(100 * tamam.filter(onTime).length / tamam.length) : null;
+    const rows = kisiler.map(k => {
+      const gs = inPeriod.filter(g => g.kisi === k && (!gState.birim || g.birim === gState.birim));
+      if (!gs.length) return null;
+      const t = gs.filter(g => g.durum === 'tamamlandi');
+      const puanlar = gs.map(g => g.degerlendirme && g.degerlendirme.puan).filter(Boolean);
+      return { k, verilen: gs.length, tamam: t.length, suren: gs.filter(g => g.durum === 'suruyor').length, geciken: gs.filter(isLate).length,
+        uzatma: gs.reduce((s, g) => s + (g.uzatmalar || []).length, 0),
+        zamaninda: t.length ? Math.round(100 * t.filter(onTime).length / t.length) : null,
+        puan: puanlar.length ? puanlar.reduce((a, b) => a + b, 0) / puanlar.length : null };
+    }).filter(Boolean).sort((a, b) => b.verilen - a.verilen);
+    const seg = (key, label) => `<button type="button" data-gfilter="${key}" aria-pressed="${gState.filter === key}">${label} <b>${cnt[key]}</b></button>`;
+    const dis = state.ready ? '' : 'disabled';
+    return `
+      <div class="main-head"><h2>Görevler</h2></div>
+      <details class="panel newg" id="gNewBox">
+        <summary><span class="btn primary">+ Yeni görev ver</span></summary>
+        <form id="gForm" class="add" style="margin-top:12px">
+          <div class="row">
+            <input type="text" id="gKisi" list="gKisiList" placeholder="Görevli kişi (ad soyad)" required maxlength="80" ${dis}>
+            <input type="text" id="gBirim" list="gBirimList" placeholder="Birim (Operasyon, Bilet…)" maxlength="60" ${dis}>
+          </div>
+          <input type="text" id="gBaslik" placeholder="Takip edilecek iş" required maxlength="200" ${dis}>
+          <textarea id="gDetay" placeholder="İşin detayı, beklenen sonuç" maxlength="4000" ${dis}></textarea>
+          <div class="row">
+            <label class="field" style="display:grid;gap:4px"><span class="label">Veriliş</span><input type="date" id="gVerilis" value="${todayStr()}" ${dis}></label>
+            <label class="field" style="display:grid;gap:4px"><span class="label">Bitiş</span><input type="date" id="gBitis" required ${dis}></label>
+          </div>
+          <div class="row">
+            <label class="check"><input type="checkbox" id="gOncelik" ${dis}> Öncelikli</label>
+            <button class="btn primary" type="submit" ${dis}>Görevi kaydet</button>
+          </div>
+          <p class="help">Bitiş günü sabah 09:00'da hatırlatılır.</p>
+        </form>
+        <datalist id="gKisiList">${kisiler.map(k => `<option value="${esc(k)}">`).join('')}</datalist>
+        <datalist id="gBirimList">${birimler.map(b => `<option value="${esc(b)}">`).join('')}</datalist>
+      </details>
+
+      <div class="tiles">
+        <div class="tile"><b>${list.length}</b><span>verilen görev</span></div>
+        <div class="tile"><b>${cnt.suren}</b><span>süren</span></div>
+        <div class="tile late"><b>${cnt.geciken}</b><span>geciken</span></div>
+        <div class="tile ok"><b>${cnt.tamam}</b><span>tamamlanan</span></div>
+        <div class="tile"><b>${zamaninda === null ? '—' : zamaninda + '%'}</b><span>zamanında tamamlanan</span></div>
+      </div>
+
+      <div class="g-tools">
+        <div class="seg" role="group" aria-label="Durum">${seg('suren', 'Süren')}${seg('geciken', 'Geciken')}${seg('tamam', 'Tamamlanan')}${seg('iptal', 'İptal')}${seg('tum', 'Tümü')}</div>
+      </div>
+      <div class="g-tools">
+        <select id="gfKisi" aria-label="Kişi"><option value="">Tüm kişiler</option>${kisiler.map(k => `<option ${gState.kisi === k ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select>
+        <select id="gfBirim" aria-label="Birim"><option value="">Tüm birimler</option>${birimler.map(b => `<option ${gState.birim === b ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select>
+        <select id="gfPeriod" aria-label="Dönem">
+          ${[['tum', 'Tüm zamanlar'], ['ay', 'Bu ay'], ['3ay', 'Son 3 ay'], ['yil', 'Bu yıl']].map(([v, l]) => `<option value="${v}" ${gState.period === v ? 'selected' : ''}>${l}</option>`).join('')}
+        </select>
+        <input type="search" id="gfQ" placeholder="Görevlerde ara" value="${esc(gState.q)}">
+      </div>
+
+      <div class="items">
+        ${shown.length ? shown.map(gorevCard).join('') : `<p class="empty">${state.ready ? (all.length ? 'Bu filtreye uyan görev yok.' : 'Henüz görev yok. "Yeni görev ver" ile ya da Claude\'a "Yeni görev iletiyorum…" diyerek ekleyin.') : 'Görevler yükleniyor…'}</p>`}
+      </div>
+
+      <div class="panel">
+        <h2>Kişi raporu <span class="label">${esc({ tum: 'Tüm zamanlar', ay: 'Bu ay', '3ay': 'Son 3 ay', yil: 'Bu yıl' }[gState.period])}${gState.birim ? ' · ' + esc(gState.birim) : ''}</span></h2>
+        ${rows.length ? `<div class="rep-wrap"><table class="rep">
+          <thead><tr><th>Kişi</th><th>Verilen</th><th>Tamamlanan</th><th>Süren</th><th>Geciken</th><th>Uzatma</th><th>Zamanında</th><th>Tamamlanma</th><th>Puan</th></tr></thead>
+          <tbody>${rows.map(r => `<tr>
+            <td><button type="button" data-gkisi="${esc(r.k)}">${esc(r.k)}</button></td>
+            <td>${r.verilen}</td><td>${r.tamam}</td><td>${r.suren}</td><td>${r.geciken ? `<b style="color:var(--red)">${r.geciken}</b>` : 0}</td><td>${r.uzatma}</td>
+            <td>${r.zamaninda === null ? '—' : r.zamaninda + '%'}</td>
+            <td><div class="bar" title="${Math.round(100 * r.tamam / r.verilen)}%"><i style="width:${Math.round(100 * r.tamam / r.verilen)}%"></i></div></td>
+            <td>${r.puan === null ? '—' : `<span class="stars">${stars(Math.round(r.puan))}</span> ${r.puan.toFixed(1)}`}</td>
+          </tr>`).join('')}</tbody></table></div>` : '<p class="empty">Rapor için henüz görev yok.</p>'}
+        <p class="help">Zamanında: bitiş tarihinde ya da öncesinde tamamlananların oranı (uzatılmış bitişe göre). Puan sizin değerlendirmenizdir.</p>
+      </div>`;
+  }
+
+  function renderGorevDrawer(g) {
+    const s = gorevStatus(g);
+    const r = nextRemind(g);
+    const ek = g.ekGorevler || [];
+    const deg = g.degerlendirme || {};
+    return `<div class="drawer" role="dialog" aria-modal="true" aria-labelledby="gdH">
+      <div class="main-head"><h3 id="gdH">${esc(g.kisi || 'Görev')}</h3><button class="btn" type="button" data-gact="close">Kapat</button></div>
+      <div class="chips"><span class="st ${s.cls}">${esc(s.text)}</span>${g.birim ? `<span class="tag birim">${esc(g.birim)}</span>` : ''}${(g.uzatmalar || []).length ? `<span class="tag">${g.uzatmalar.length} kez uzatıldı · ilk bitiş ${esc(g.ilkBitisTarihi ? shortDate(parse(g.ilkBitisTarihi)) : '—')}</span>` : ''}</div>
+      <div class="row">
+        <div class="field"><span class="label">Görevli</span><input type="text" id="gdKisi" list="gKisiList2" value="${esc(g.kisi || '')}" maxlength="80"></div>
+        <div class="field"><span class="label">Birim</span><input type="text" id="gdBirim" list="gBirimList2" value="${esc(g.birim || '')}" maxlength="60"></div>
+      </div>
+      <datalist id="gKisiList2">${[...new Set([...state.gorevler.values()].map(x => x.kisi).filter(Boolean))].map(k => `<option value="${esc(k)}">`).join('')}</datalist>
+      <datalist id="gBirimList2">${BIRIMLER.map(b => `<option value="${esc(b)}">`).join('')}</datalist>
+      <div class="field"><span class="label">Takip edilecek iş</span><input type="text" id="gdBaslik" value="${esc(g.baslik || '')}" maxlength="200"></div>
+      <div class="field"><span class="label">Detay</span><textarea id="gdDetay" maxlength="4000">${esc(g.detay || '')}</textarea></div>
+      <div class="row">
+        <div class="field"><span class="label">Veriliş</span><input type="date" id="gdVerilis" value="${esc(g.verilisTarihi || '')}"></div>
+        <div class="field"><span class="label">Bitiş</span><input type="date" id="gdBitis" value="${esc(g.bitisTarihi || '')}"></div>
+        <div class="field"><span class="label">Saat</span><input type="time" id="gdSaat" value="${esc(g.saat || '')}"></div>
+      </div>
+      <label class="check"><input type="checkbox" id="gdOncelik" ${g.oncelik === 'yuksek' ? 'checked' : ''}> Öncelikli</label>
+      <div class="row"><button class="btn primary" type="button" data-gact="save">Değişiklikleri kaydet</button></div>
+
+      <div class="field"><span class="label">Durum</span><div class="row">
+        ${g.durum !== 'tamamlandi' ? '<button class="btn ok" type="button" data-gact="tamam">Tamamlandı</button>' : ''}
+        ${g.durum !== 'suruyor' ? '<button class="btn" type="button" data-gact="surdur">Sürüyor olarak işaretle</button>' : ''}
+        ${g.durum !== 'iptal' ? '<button class="btn" type="button" data-gact="iptal">İptal et</button>' : ''}
+      </div></div>
+
+      ${g.durum === 'suruyor' ? `<div class="field"><span class="label">Süre uzat</span>
+        <div class="row"><input type="date" id="gdUzatTarih" aria-label="Yeni bitiş tarihi" value="${esc(g.bitisTarihi || '')}"><input type="text" id="gdUzatNot" placeholder="Görüşme sonucu / neden" maxlength="500"></div>
+        <div class="row"><button class="btn" type="button" data-gact="uzat">Süreyi uzat</button></div></div>` : ''}
+      ${(g.uzatmalar || []).length ? `<ul class="hist">${g.uzatmalar.map(u => `<li>${esc(shortDate(parse(u.eskiBitis)))} → <b>${esc(shortDate(parse(u.yeniBitis)))}</b>${u.not ? ' · ' + esc(u.not) : ''} <span class="help">(${esc(dateTime(u.at))})</span></li>`).join('')}</ul>` : ''}
+
+      <div class="field"><span class="label">Ek görevler</span>
+        <ul class="hist">${ek.map((e, i) => `<li class="${e.done ? 'done' : ''}"><label><input type="checkbox" data-gact="ek" data-i="${i}" ${e.done ? 'checked' : ''}><span><b>${esc(String(e.no || i + 2))}. görev:</b> ${esc(e.metin)}${e.bitis ? ` · bitiş ${esc(shortDate(parse(e.bitis)))}` : ''}</span></label></li>`).join('') || '<li class="empty">Ek görev yok.</li>'}</ul>
+        <div class="row"><input type="text" id="gdEkMetin" placeholder="${ek.length + 2}. görev" maxlength="300"><input type="date" id="gdEkBitis" aria-label="Ek görev bitişi"></div>
+        <div class="row"><button class="btn" type="button" data-gact="ekEkle">Ek görev ekle</button></div>
+      </div>
+
+      ${g.durum === 'suruyor' && r ? `<div class="field"><span class="label">Hatırlatma: ${esc(dateTime(r))}</span><div class="row">
+        <button class="btn" type="button" data-gact="snooze" data-when="60">1 saat sonra</button>
+        <button class="btn" type="button" data-gact="snooze" data-when="yarin">Yarın 09:00</button>
+        <button class="btn" type="button" data-gact="snooze" data-when="pzt">Pazartesi</button></div></div>` : ''}
+
+      <div class="field"><span class="label">Görüşme notları</span>
+        <ul class="notes">${(g.notlar || []).map(n => `<li><time>${esc(dateTime(n.at))}</time>${esc(n.text)}</li>`).join('') || '<li class="empty">Henüz not yok.</li>'}</ul>
+        <textarea id="gdNot" placeholder="Görüşme sonucu, gelişme…" maxlength="2000"></textarea>
+        <div class="row"><button class="btn" type="button" data-gact="not">Notu ekle</button></div>
+      </div>
+
+      <div class="field"><span class="label">Değerlendirme (sizin)</span>
+        <div>${[1, 2, 3, 4, 5].map(p => `<button type="button" class="starbtn ${(state.puanTaslak ?? deg.puan ?? 0) >= p ? 'on' : ''}" data-gact="puan" data-p="${p}" aria-label="${p} puan">★</button>`).join('')}</div>
+        <textarea id="gdDegYorum" placeholder="Görevin başarısı hakkında yorumunuz" maxlength="2000">${esc(deg.yorum || '')}</textarea>
+        <div class="row"><button class="btn" type="button" data-gact="degKaydet">Değerlendirmeyi kaydet</button></div>
+        ${deg.at ? `<p class="help">Son değerlendirme: ${esc(dateTime(deg.at))}</p>` : ''}
+      </div>
+      <p class="help">${g.kaynak && srcLabel[g.kaynak] ? esc(srcLabel[g.kaynak]) + ' · ' : ''}Oluşturulma: ${esc(g.createdAt ? dateTime(g.createdAt) : '—')}</p>
+      <div class="row"><button class="btn danger ${state.armedDelete ? 'armed' : ''}" type="button" data-gact="sil">${state.armedDelete ? 'Emin misiniz? Silmek için tekrar basın' : 'Görevi sil'}</button></div>
+    </div>`;
+  }
+
+  function handleGorev(t) {
+    const act = t.dataset.gact;
+    if (act === 'open') { state.openGorev = t.dataset.gid; state.openId = null; state.armedDelete = false; state.puanTaslak = null; renderDrawer(); return; }
+    if (act === 'close') { state.openGorev = null; state.armedDelete = false; state.puanTaslak = null; renderDrawer(); return; }
+    const id = t.dataset.gid || state.openGorev;
+    const g = id && state.gorevler.get(id);
+    if (!g || !state.ready) return;
+    const now = new Date().toISOString();
+    const val = s => { const n = document.getElementById(s); return n ? n.value.trim() : ''; };
+    if (act === 'save') {
+      const baslik = val('gdBaslik'); if (!baslik) { document.getElementById('gdBaslik').focus(); return; }
+      const bitis = val('gdBitis');
+      const patch = { kisi: val('gdKisi'), birim: val('gdBirim'), baslik, detay: val('gdDetay'), verilisTarihi: val('gdVerilis'),
+        saat: val('gdSaat'), oncelik: document.getElementById('gdOncelik').checked ? 'yuksek' : 'normal' };
+      if (bitis !== (g.bitisTarihi || '')) Object.assign(patch, { bitisTarihi: bitis, remindAt: remind9(bitis), snoozedUntil: '', seenAt: '', notifiedAt: '' });
+      saveGorev(id, patch); renderDrawer(); return;
+    }
+    if (act === 'tamam') { saveGorev(id, { durum: 'tamamlandi', tamamlanmaTarihi: todayStr() }); renderDrawer(); return; }
+    if (act === 'surdur') { saveGorev(id, { durum: 'suruyor', tamamlanmaTarihi: '' }); renderDrawer(); return; }
+    if (act === 'iptal') { saveGorev(id, { durum: 'iptal' }); renderDrawer(); return; }
+    if (act === 'done') { saveGorev(id, { durum: 'tamamlandi', tamamlanmaTarihi: todayStr() }); return; }
+    if (act === 'seen') { saveGorev(id, { seenAt: now }); return; }
+    if (act === 'uzat') {
+      const yeni = val('gdUzatTarih');
+      if (!yeni || yeni === g.bitisTarihi) { document.getElementById('gdUzatTarih').focus(); return; }
+      const uz = [...(g.uzatmalar || []), { at: now, eskiBitis: g.bitisTarihi || '', yeniBitis: yeni, not: val('gdUzatNot') }];
+      saveGorev(id, { uzatmalar: uz, bitisTarihi: yeni, ilkBitisTarihi: g.ilkBitisTarihi || g.bitisTarihi || yeni,
+        remindAt: remind9(yeni), snoozedUntil: '', seenAt: '', notifiedAt: '' });
+      renderDrawer(); return;
+    }
+    if (act === 'ek') {
+      const i = Number(t.dataset.i); const ek = (g.ekGorevler || []).map(e => ({ ...e }));
+      if (!ek[i]) return; ek[i].done = !ek[i].done; ek[i].doneAt = ek[i].done ? now : '';
+      saveGorev(id, { ekGorevler: ek }); renderDrawer(); return;
+    }
+    if (act === 'ekSeen' || act === 'ekDone') {
+      const i = Number(t.dataset.i); const ek = (g.ekGorevler || []).map(e => ({ ...e }));
+      if (!ek[i]) return;
+      if (act === 'ekSeen') ek[i].seenAt = now; else { ek[i].done = true; ek[i].doneAt = now; }
+      saveGorev(id, { ekGorevler: ek }); return;
+    }
+    if (act === 'ekEkle') {
+      const metin = val('gdEkMetin'); if (!metin) { document.getElementById('gdEkMetin').focus(); return; }
+      const ek = [...(g.ekGorevler || [])];
+      ek.push({ no: ek.length + 2, metin, bitis: val('gdEkBitis'), done: false, doneAt: '', seenAt: '', notifiedAt: '', eklendi: now });
+      saveGorev(id, { ekGorevler: ek }); renderDrawer(); return;
+    }
+    if (act === 'not') {
+      const v = val('gdNot'); if (!v) return;
+      saveGorev(id, { notlar: [...(g.notlar || []), { at: now, text: v }] }); renderDrawer(); return;
+    }
+    if (act === 'snooze') {
+      const d = new Date(); let tt;
+      if (t.dataset.when === '60') tt = new Date(d.getTime() + 3600000);
+      else if (t.dataset.when === 'yarin') { tt = addDays(d, 1); tt.setHours(9, 0, 0, 0); }
+      else if (t.dataset.when === 'pzt') { tt = addDays(monday(d), 7); tt.setHours(9, 0, 0, 0); }
+      saveGorev(id, { snoozedUntil: tt.toISOString(), seenAt: '', notifiedAt: '' }); if (state.openGorev) renderDrawer(); return;
+    }
+    if (act === 'puan') { state.puanTaslak = Number(t.dataset.p); renderDrawer(); return; }
+    if (act === 'degKaydet') {
+      const puan = state.puanTaslak ?? (g.degerlendirme && g.degerlendirme.puan) ?? 0;
+      saveGorev(id, { degerlendirme: { puan, yorum: val('gdDegYorum'), at: now } }); state.puanTaslak = null; renderDrawer(); return;
+    }
+    if (act === 'sil') {
+      if (!state.armedDelete) { state.armedDelete = true; renderDrawer(); return; }
+      state.gorevler.delete(id); state.openGorev = null; state.armedDelete = false;
+      write('gorevler/' + id, () => gorevRef(id).delete()); render(); return;
+    }
+  }
+
+  // ---------- Görünüm parçaları ----------
+  const typeLabel = { gorev: 'Görev', toplanti: 'Toplantı', not: 'Not' };
+  const srcLabel = { elle: '', claude: 'Claude ekledi', mail: 'mailden', whatsapp: 'WhatsApp' };
+  const itemsOn = date => [...state.items.values()].filter(i => i.date === date)
+    .sort((a, b) => (a.time || '99').localeCompare(b.time || '99') || (a.createdAt || '').localeCompare(b.createdAt || ''));
+
+  function itemCard(it, opts = {}) {
+    const r = nextRemind(it);
+    const late = opts.late;
+    const tags = [
+      `<span class="tag ${it.type === 'not' ? 'type-not' : ''}">${esc(typeLabel[it.type] || 'Görev')}</span>`,
+      late ? `<span class="tag late">Gecikmiş · ${esc(shortDate(parse(it.date)))}</span>` : '',
+      r && !it.done ? `<span class="tag rem">⏰ ${esc(dateTime(r))}</span>` : '',
+      srcLabel[it.source] ? `<span class="tag src">${esc(srcLabel[it.source])}</span>` : '',
+      it.notes && it.notes.length ? `<span class="tag">${it.notes.length} not</span>` : '',
+    ].join('');
+    const checkbox = it.type === 'not' ? '' :
+      `<input type="checkbox" data-act="toggle" data-id="${esc(it.id)}" ${it.done ? 'checked' : ''} aria-label="Tamamlandı olarak işaretle">`;
+    return `<div class="item ${it.done ? 'done' : ''} ${it.priority === 'yuksek' ? 'high' : ''}">
+      ${checkbox}
+      <button type="button" class="body" data-act="open" data-id="${esc(it.id)}">
+        <div class="title">${esc(it.title)}</div>
+        ${it.note ? `<div class="note">${esc(it.note)}</div>` : ''}
+        <div class="meta">${tags}</div>
+      </button>
+      ${it.time ? `<span class="time mono">${esc(it.time)}</span>` : ''}
+    </div>`;
+  }
+  function holChips(date) {
+    const hs = holByDate.get(date) || [];
+    if (!hs.length) return '';
+    return `<div class="chips">${hs.map(h => `<span class="hol-chip ${holKindClass(h.kind)}" title="${esc(h.note)}">${esc(h.name)}</span>`).join('')}</div>`;
+  }
+  function planBox(key, label, placeholder) {
+    const p = state.plans.get(key);
+    return `<div class="panel plan">
+      <span class="label">${esc(label)}</span>
+      <textarea id="plan-${esc(key)}" data-plan="${esc(key)}" placeholder="${esc(placeholder)}" ${state.ready ? '' : 'disabled'}>${esc(p ? p.text : '')}</textarea>
+      <span class="saved" id="saved-${esc(key)}">${p && p.updatedAt ? 'Son kayıt: ' + esc(dateTime(p.updatedAt)) : 'Yazdıkça kaydedilir.'}</span>
+    </div>`;
+  }
+
+  function renderDay() {
+    const d = parse(state.cursor);
+    const isToday = state.cursor === todayStr();
+    const list = itemsOn(state.cursor);
+    const late = isToday ? [...state.items.values()].filter(i => !i.done && i.type !== 'not' && i.date < state.cursor)
+      .sort((a, b) => a.date.localeCompare(b.date)) : [];
+    return `
+      <div class="main-head">
+        <h2>${esc(longDate(d))}${isToday ? ' · Bugün' : ''}</h2>
+        <div class="nav">
+          <button class="btn" type="button" data-nav="-1">‹ Önceki</button>
+          <button class="btn" type="button" data-nav="0">Bugün</button>
+          <button class="btn" type="button" data-nav="1">Sonraki ›</button>
+        </div>
+      </div>
+      ${holChips(state.cursor)}
+      ${late.length ? `<div class="items"><span class="label">Gecikmiş işler</span>${late.map(i => itemCard(i, { late: true })).join('')}</div>` : ''}
+      <div class="items">
+        <span class="label">Görevler ve notlar</span>
+        ${list.length ? list.map(i => itemCard(i)).join('') : `<p class="empty">${state.ready ? 'Bu gün için kayıt yok. Soldaki formdan ya da Claude\'a yazarak ekleyebilirsiniz.' : state.noDb ? 'Kayıtlar bu görünümde açılamıyor.' : 'Kayıtlar yükleniyor…'}</p>`}
+      </div>
+      ${(() => {
+        const gb = gorevBitisOn(state.cursor);
+        const gl = isToday ? [...state.gorevler.values()].filter(isLate) : [];
+        return gb.length || gl.length ? `<div class="items"><span class="label">Verilen görevler · bitişi ${isToday ? 'bugün olan ve geciken' : 'bu gün olan'}</span>${[...gl, ...gb].map(gorevCard).join('')}</div>` : '';
+      })()}
+      ${planBox('gun-' + state.cursor, 'Günlük not', 'Bugün aklınızda tutmak istedikleriniz, görüşme notları…')}`;
+  }
+
+  function renderWeek() {
+    const start = monday(parse(state.cursor));
+    const end = addDays(start, 6);
+    const days = [...Array(7)].map((_, k) => addDays(start, k));
+    const cols = days.map(d => {
+      const s = ymd(d);
+      const its = itemsOn(s);
+      return `<div class="day-col ${s === todayStr() ? 'is-today' : ''}">
+        <header><button type="button" data-goto="${s}">${KISA[(d.getDay() + 6) % 7]} ${d.getDate()}</button></header>
+        ${holChips(s)}
+        ${its.map(i => `<button type="button" class="mini-item ${i.done ? 'done' : ''} ${i.priority === 'yuksek' ? 'high' : ''}" data-act="open" data-id="${esc(i.id)}">${i.time ? `<span class="mono">${esc(i.time)}</span> ` : ''}${esc(i.title)}</button>`).join('')}
+        ${gorevBitisOn(s).map(g => `<button type="button" class="mini-item g" data-gact="open" data-gid="${esc(g.id)}">Bitiş: ${esc(g.kisi || '')} · ${esc(g.baslik)}</button>`).join('')}
+        ${its.length || gorevBitisOn(s).length ? '' : '<span class="empty">—</span>'}
+      </div>`;
+    }).join('');
+    return `
+      <div class="main-head">
+        <h2>${esc(shortDate(start))} – ${esc(shortDate(end))} ${end.getFullYear()}</h2>
+        <div class="nav">
+          <button class="btn" type="button" data-nav="-7">‹ Önceki hafta</button>
+          <button class="btn" type="button" data-nav="0">Bu hafta</button>
+          <button class="btn" type="button" data-nav="7">Sonraki hafta ›</button>
+        </div>
+      </div>
+      ${planBox('hafta-' + ymd(start), 'Haftalık plan', 'Bu haftanın hedefleri, takip edilecek konular…')}
+      <div class="week">${cols}</div>`;
+  }
+
+  function renderMonth() {
+    const c = parse(state.cursor);
+    const first = new Date(c.getFullYear(), c.getMonth(), 1);
+    const start = monday(first);
+    const cells = [];
+    for (let k = 0; k < 42; k++) {
+      const d = addDays(start, k);
+      const s = ymd(d);
+      const its = itemsOn(s);
+      const hs = holByDate.get(s) || [];
+      const isX = hs.some(h => h.kind === 'xmas');
+      cells.push(`<button type="button" class="cell ${d.getMonth() !== c.getMonth() ? 'out' : ''} ${s === todayStr() ? 'is-today' : ''} ${isX ? 'xmas' : ''}" data-goto="${s}">
+        <span class="n">${d.getDate()}</span>
+        ${hs.slice(0, 2).map(h => `<span class="h ${holKindClass(h.kind)}">${esc(h.name)}</span>`).join('')}
+        ${its.slice(0, 3).map(i => `<span class="e ${i.done ? 'done' : ''}">${i.time ? esc(i.time) + ' ' : ''}${esc(i.title)}</span>`).join('')}
+        ${its.length > 3 ? `<span class="more">+${its.length - 3} kayıt</span>` : ''}
+        ${gorevBitisOn(s).slice(0, 2).map(g => `<span class="e g">Bitiş: ${esc(g.kisi || '')}</span>`).join('')}
+        <span class="dots">${hs.length ? '<i class="h"></i>' : ''}${its.slice(0, 4).map(() => '<i></i>').join('')}</span>
+      </button>`);
+      if (k >= 34 && addDays(start, k + 1).getMonth() !== c.getMonth() && (k + 1) % 7 === 0) break;
+    }
+    const key = `ay-${c.getFullYear()}-${pad(c.getMonth() + 1)}`;
+    return `
+      <div class="main-head">
+        <h2>${AYLAR[c.getMonth()]} ${c.getFullYear()}</h2>
+        <div class="nav">
+          <button class="btn" type="button" data-navm="-1">‹ Önceki ay</button>
+          <button class="btn" type="button" data-nav="0">Bu ay</button>
+          <button class="btn" type="button" data-navm="1">Sonraki ay ›</button>
+        </div>
+      </div>
+      ${planBox(key, 'Aylık plan', 'Bu ayın öncelikleri, sezon hazırlıkları, kampanyalar…')}
+      <div class="month-wrap"><div class="month">${KISA.map(k => `<div class="dow">${k}</div>`).join('')}${cells.join('')}</div></div>`;
+  }
+
+  function renderSpecial() {
+    const from = todayStr();
+    const until = ymd(addDays(new Date(), 400));
+    const merged = [];
+    const sorted = H.filter(h => h.date >= from && h.date <= until).sort((a, b) => a.date.localeCompare(b.date));
+    for (const h of sorted) {
+      const last = merged[merged.length - 1];
+      if (last && last.name === h.name && ymd(addDays(parse(last.to), 1)) === h.date) last.to = h.date;
+      else merged.push({ ...h, from: h.date, to: h.date });
+    }
+    const byMonth = new Map();
+    for (const h of merged) { const k = h.from.slice(0, 7); if (!byMonth.has(k)) byMonth.set(k, []); byMonth.get(k).push(h); }
+    const kindName = { resmi: 'Resmî tatil', kktc: 'KKTC', dini: 'Dinî gün', ozel: 'Özel gün', xmas: 'Christmas & yılbaşı' };
+    return `
+      <div class="main-head"><h2>Özel günler ve tatiller</h2></div>
+      <p class="help">Türkiye ve KKTC resmî tatilleri, dinî bayramlar, Christmas ve yılbaşı dönemi ile turizm pazarı için önemli günler. 2027 dinî bayram tarihleri tahminîdir; Diyanet takvimiyle teyit edin.</p>
+      <div class="special">
+        ${[...byMonth.entries()].map(([k, list]) => {
+          const [y, m] = k.split('-').map(Number);
+          return `<section><h3>${AYLAR[m - 1]} ${y}</h3><ul>${list.map(h => {
+            const a = parse(h.from), b = parse(h.to);
+            const when = h.from === h.to ? `${a.getDate()} ${AYLAR[a.getMonth()]}, ${GUNLER[a.getDay()]}` : `${a.getDate()}–${b.getDate()} ${AYLAR[b.getMonth()]}`;
+            return `<li><span class="when">${esc(when)}</span><span class="nm">${esc(h.name)}${h.note ? `<small>${esc(h.note)}</small>` : ''}</span><span class="hol-chip ${holKindClass(h.kind)}">${esc(kindName[h.kind])}</span></li>`;
+          }).join('')}</ul></section>`;
+        }).join('')}
+      </div>`;
+  }
+
+  function renderMini() {
+    const [y, m] = state.miniMonth.split('-').map(Number);
+    $('#miniTitle').textContent = `${AYLAR[m - 1]} ${y}`;
+    const first = new Date(y, m - 1, 1);
+    const start = monday(first);
+    const datesWithItems = new Set([...state.items.values()].filter(i => !i.done).map(i => i.date)
+      .concat([...state.gorevler.values()].filter(g => g.durum === 'suruyor').map(g => g.bitisTarihi)));
+    let html = KISA.map(k => `<span class="dow">${k[0]}</span>`).join('');
+    for (let k = 0; k < 42; k++) {
+      const d = addDays(start, k);
+      const s = ymd(d);
+      const hs = holByDate.get(s) || [];
+      const cls = [d.getMonth() !== m - 1 ? 'out' : '', hs.some(h => h.kind !== 'xmas' && h.kind !== 'ozel') ? 'hol' : '',
+        hs.some(h => h.kind === 'xmas') ? 'xmas' : '', s === todayStr() ? 'today' : '', s === state.cursor ? 'sel' : ''].join(' ');
+      html += `<button type="button" class="${cls}" data-goto="${s}" title="${esc(hs.map(h => h.name).join(', '))}" aria-label="${esc(longDate(d))}">${d.getDate()}${datesWithItems.has(s) ? '<span class="dot"></span>' : ''}</button>`;
+    }
+    $('#mini').innerHTML = html;
+  }
+
+  function renderSide() {
+    const now = Date.now();
+    const soon = [...state.items.values()].filter(i => !i.done && nextRemind(i) && Date.parse(nextRemind(i)) > now)
+      .sort((a, b) => nextRemind(a).localeCompare(nextRemind(b))).slice(0, 8);
+    $('#upcoming').innerHTML = soon.length ? soon.map(i => `<li><span class="d mono">${esc(dateTime(nextRemind(i)))}</span><span class="t">${esc(i.title)}</span></li>`).join('')
+      : `<li class="empty">${state.ready ? 'Kurulu hatırlatma yok.' : 'Yükleniyor…'}</li>`;
+    const from = todayStr();
+    const seen = new Set();
+    const hol = H.filter(h => h.date >= from).sort((a, b) => a.date.localeCompare(b.date))
+      .filter(h => !seen.has(h.name) && seen.add(h.name)).slice(0, 7);
+    const kisiOpts = [...new Set([...state.gorevler.values()].map(g => g.kisi).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
+    const birimOpts = [...new Set([...BIRIMLER, ...[...state.gorevler.values()].map(g => g.birim).filter(Boolean)])];
+    const kl = kisiOpts.map(k => `<option value="${esc(k)}">`).join(''), bl = birimOpts.map(b => `<option value="${esc(b)}">`).join('');
+    if ($('#fKisiList').innerHTML !== kl) $('#fKisiList').innerHTML = kl;
+    if ($('#fBirimList').innerHTML !== bl) $('#fBirimList').innerHTML = bl;
+    const gs = [...state.gorevler.values()].filter(g => g.durum === 'suruyor' && g.bitisTarihi)
+      .sort((a, b) => a.bitisTarihi.localeCompare(b.bitisTarihi)).slice(0, 8);
+    $('#upGorev').innerHTML = gs.length ? gs.map(g => `<li><span class="d" style="${isLate(g) ? 'color:var(--red);font-weight:600' : ''}">${esc(shortDate(parse(g.bitisTarihi)))}</span><span class="t"><b>${esc(g.kisi || '')}</b> · ${esc(g.baslik)}</span></li>`).join('')
+      : `<li class="empty">${state.ready ? 'Süren görev yok.' : 'Yükleniyor…'}</li>`;
+    $('#upHol').innerHTML = hol.map(h => `<li><span class="d">${esc(shortDate(parse(h.date)))}</span><span class="t">${esc(h.name)}</span></li>`).join('');
+  }
+
+  function renderAlerts() {
+    const now = Date.now();
+    const due = [...state.items.values()].filter(i => isDue(i, now)).sort((a, b) => nextRemind(a).localeCompare(nextRemind(b)));
+    $('#alerts').innerHTML = due.map(i => `<div class="alert" role="alert">
+      <div class="what"><b>⏰ ${esc(i.title)}</b><span>${esc(longDate(parse(i.date)))}${i.time ? ' · ' + esc(i.time) : ''}${i.note ? ' · ' + esc(i.note.slice(0, 120)) : ''}</span></div>
+      <div class="acts">
+        ${i.type !== 'not' ? `<button class="btn ok" type="button" data-act="done" data-id="${esc(i.id)}">Tamamlandı</button>` : ''}
+        <button class="btn" type="button" data-act="snooze" data-when="15" data-id="${esc(i.id)}">15 dk sonra</button>
+        <button class="btn" type="button" data-act="snooze" data-when="60" data-id="${esc(i.id)}">1 saat sonra</button>
+        <button class="btn" type="button" data-act="snooze" data-when="yarin" data-id="${esc(i.id)}">Yarın 09:00</button>
+        <button class="btn" type="button" data-act="open" data-id="${esc(i.id)}">Not ekle</button>
+        <button class="btn" type="button" data-act="seen" data-id="${esc(i.id)}">Gördüm</button>
+      </div>
+    </div>`).join('') + [...state.gorevler.values()].filter(g => gorevDue(g, now)).map(g => `<div class="alert" role="alert">
+      <div class="what"><b>📋 Görev bitişi: ${esc(g.kisi || '')} · ${esc(g.baslik)}</b><span>${esc(g.birim || '')}${g.birim ? ' · ' : ''}Bitiş ${esc(g.bitisTarihi ? longDate(parse(g.bitisTarihi)) : '—')}${isLate(g) ? ' · gecikmede' : ''}</span></div>
+      <div class="acts">
+        <button class="btn ok" type="button" data-gact="done" data-gid="${esc(g.id)}">Tamamlandı</button>
+        <button class="btn" type="button" data-gact="open" data-gid="${esc(g.id)}">Süre uzat / not ekle</button>
+        <button class="btn" type="button" data-gact="snooze" data-when="yarin" data-gid="${esc(g.id)}">Yarın 09:00</button>
+        <button class="btn" type="button" data-gact="seen" data-gid="${esc(g.id)}">Gördüm</button>
+      </div>
+    </div>`).join('') + [...state.gorevler.values()].flatMap(g => (g.ekGorevler || []).map((e, i) => ({ g, e, i }))).filter(x => ekDue(x.g, x.e)).map(({ g, e, i }) => `<div class="alert" role="alert">
+      <div class="what"><b>📋 ${esc(String(e.no || i + 2))}. görev bitişi: ${esc(g.kisi || '')} · ${esc(e.metin)}</b><span>Ana görev: ${esc(g.baslik)} · bitiş ${esc(shortDate(parse(e.bitis)))}</span></div>
+      <div class="acts">
+        <button class="btn ok" type="button" data-gact="ekDone" data-i="${i}" data-gid="${esc(g.id)}">Tamamlandı</button>
+        <button class="btn" type="button" data-gact="open" data-gid="${esc(g.id)}">Aç</button>
+        <button class="btn" type="button" data-gact="ekSeen" data-i="${i}" data-gid="${esc(g.id)}">Gördüm</button>
+      </div>
+    </div>`).join('');
+  }
+
+  function renderDrawer() {
+    const ov = $('#overlay');
+    const gg = state.openGorev && state.gorevler.get(state.openGorev);
+    if (gg) { ov.hidden = false; ov.innerHTML = renderGorevDrawer(gg); return; }
+    const it = state.openId && state.items.get(state.openId);
+    if (!it) { ov.hidden = true; ov.innerHTML = ''; return; }
+    const r = nextRemind(it);
+    const localDT = iso => { if (!iso) return ''; const d = new Date(iso); return `${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+    ov.hidden = false;
+    ov.innerHTML = `<div class="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitleH">
+      <div class="main-head"><h3 id="dTitleH">${esc(typeLabel[it.type] || 'Görev')}</h3><button class="btn" type="button" data-act="close">Kapat</button></div>
+      <div class="field"><span class="label">Başlık</span><input type="text" id="dTitle" value="${esc(it.title)}" maxlength="200"></div>
+      <div class="field"><span class="label">Bir kişiye görevlendir</span>
+        <div class="row"><input type="text" id="dKisi" list="fKisiList" placeholder="Görevlendirilen kişi" maxlength="80"><input type="text" id="dBirim" list="fBirimList" placeholder="Birim" maxlength="60"></div>
+        <div class="row"><button class="btn" type="button" data-act="assign">Kişiye görevlendir</button></div>
+        <span class="help">Kayıt Görevler'e taşınır; bitiş tarihi bu kaydın tarihi olur.</span>
+      </div>
+      <div class="row">
+        <div class="field"><span class="label">Tarih</span><input type="date" id="dDate" value="${esc(it.date)}"></div>
+        <div class="field"><span class="label">Saat</span><input type="time" id="dTime" value="${esc(it.time || '')}"></div>
+      </div>
+      <div class="row">
+        <div class="field"><span class="label">Tür</span><select id="dType">${Object.entries(typeLabel).map(([k, v]) => `<option value="${k}" ${it.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+        <label class="check" style="align-self:end"><input type="checkbox" id="dHigh" ${it.priority === 'yuksek' ? 'checked' : ''}> Öncelikli</label>
+      </div>
+      <div class="field"><span class="label">Hatırlatma</span><input type="datetime-local" id="dRemind" value="${esc(localDT(r))}"></div>
+      <div class="field"><span class="label">Açıklama</span><textarea id="dNote" maxlength="4000">${esc(it.note || '')}</textarea></div>
+      <div class="row"><button class="btn primary" type="button" data-act="saveDrawer">Değişiklikleri kaydet</button>
+        ${it.type !== 'not' ? `<button class="btn ok" type="button" data-act="toggleDrawer">${it.done ? 'Tamamlanmadı olarak işaretle' : 'Tamamlandı'}</button>` : ''}</div>
+      ${!it.done && r ? `<div class="field"><span class="label">Daha sonra hatırlat</span><div class="row">
+        <button class="btn" type="button" data-act="snooze" data-when="15" data-id="${esc(it.id)}">15 dk</button>
+        <button class="btn" type="button" data-act="snooze" data-when="60" data-id="${esc(it.id)}">1 saat</button>
+        <button class="btn" type="button" data-act="snooze" data-when="180" data-id="${esc(it.id)}">3 saat</button>
+        <button class="btn" type="button" data-act="snooze" data-when="yarin" data-id="${esc(it.id)}">Yarın 09:00</button>
+        <button class="btn" type="button" data-act="snooze" data-when="pzt" data-id="${esc(it.id)}">Pazartesi</button></div></div>` : ''}
+      <div class="field"><span class="label">Notlar</span>
+        <ul class="notes">${(it.notes || []).map(n => `<li><time>${esc(dateTime(n.at))}</time>${esc(n.text)}</li>`).join('') || '<li class="empty">Henüz not yok.</li>'}</ul>
+        <textarea id="dNewNote" placeholder="Bu konuyla ilgili not ekleyin…" maxlength="2000"></textarea>
+        <div class="row"><button class="btn" type="button" data-act="addNote">Notu ekle</button></div>
+      </div>
+      <p class="help">${it.source && srcLabel[it.source] ? esc(srcLabel[it.source]) + ' · ' : ''}Oluşturulma: ${esc(it.createdAt ? dateTime(it.createdAt) : '—')}${it.doneAt && it.done ? ' · Tamamlandı: ' + esc(dateTime(it.doneAt)) : ''}</p>
+      <div class="row"><button class="btn danger ${state.armedDelete ? 'armed' : ''}" type="button" data-act="delete">${state.armedDelete ? 'Emin misiniz? Silmek için tekrar basın' : 'Kaydı sil'}</button></div>
+    </div>`;
+  }
+
+  // force: kullanıcının kendi eylemiyle (filtre, arama) yeniden çiz ve odaklanılan alanı geri yükle.
+  function render(force) {
+    $('#todayLabel').textContent = longDate(new Date());
+    document.querySelectorAll('.views button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === state.view)));
+    const main = $('#main');
+    const a0 = document.activeElement;
+    const typing = a0 && a0.closest && a0.closest('#main') && /^(INPUT|TEXTAREA|SELECT)$/.test(a0.tagName);
+    if (force === true || !typing) {
+      const fid = typing ? a0.id : null;
+      let sel = null; try { if (typing && typeof a0.selectionStart === 'number') sel = [a0.selectionStart, a0.selectionEnd]; } catch (e) {}
+      const newOpen = document.getElementById('gNewBox') && document.getElementById('gNewBox').open;
+      main.innerHTML = state.view === 'gun' ? renderDay() : state.view === 'hafta' ? renderWeek() : state.view === 'ay' ? renderMonth()
+        : state.view === 'gorevler' ? renderGorevler() : renderSpecial();
+      if (newOpen && document.getElementById('gNewBox')) document.getElementById('gNewBox').open = true;
+      if (fid) { const n = document.getElementById(fid); if (n) { n.focus(); try { if (sel) n.setSelectionRange(sel[0], sel[1]); } catch (e) {} } }
+    }
+    renderMini(); renderSide(); renderAlerts();
+    if (!$('#overlay').hidden || state.openId || state.openGorev) {
+      const a = document.activeElement;
+      if (!(a && a.closest && a.closest('.drawer'))) renderDrawer();
+    }
+  }
+
+  // ---------- Olaylar ----------
+  document.addEventListener('click', e => {
+    const t = e.target.closest('button, input[type=checkbox]');
+    if (!t) { if (e.target.id === 'overlay') { state.openId = null; state.openGorev = null; state.armedDelete = false; renderDrawer(); } return; }
+    if (t.dataset.gact) { handleGorev(t); return; }
+    if (t.dataset.gfilter) { gState.filter = t.dataset.gfilter; saveGFilter(); render(true); return; }
+    if (t.dataset.gkisi) { gState.kisi = t.dataset.gkisi; gState.filter = 'tum'; saveGFilter(); render(true); return; }
+    if (t.dataset.view) { state.view = t.dataset.view; try { localStorage.setItem('ajanda.view', state.view); } catch (err) {} render(true); return; }
+    if (t.dataset.goto) { state.cursor = t.dataset.goto; state.miniMonth = state.cursor.slice(0, 7); if (state.view === 'ozel' || t.closest('.cell') || t.closest('.day-col')) state.view = 'gun'; render(); return; }
+    if (t.dataset.nav !== undefined) {
+      const n = Number(t.dataset.nav);
+      state.cursor = n === 0 ? todayStr() : ymd(addDays(parse(state.cursor), n));
+      state.miniMonth = state.cursor.slice(0, 7); render(); return;
+    }
+    if (t.dataset.navm !== undefined) {
+      const c = parse(state.cursor); const d = new Date(c.getFullYear(), c.getMonth() + Number(t.dataset.navm), 1);
+      state.cursor = ymd(d); state.miniMonth = state.cursor.slice(0, 7); render(); return;
+    }
+    if (t.id === 'miniPrev' || t.id === 'miniNext') {
+      const [y, m] = state.miniMonth.split('-').map(Number);
+      const d = new Date(y, m - 1 + (t.id === 'miniNext' ? 1 : -1), 1);
+      state.miniMonth = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; renderMini(); return;
+    }
+    const id = t.dataset.id || state.openId;
+    const act = t.dataset.act;
+    if (!act) return;
+    if (!state.ready && act !== 'open' && act !== 'close') return;
+    const it = id && state.items.get(id);
+    if (act === 'open') { state.openId = t.dataset.id; state.armedDelete = false; renderDrawer(); setTimeout(() => { const n = $('#dNewNote'); if (n && t.textContent.includes('Not')) n.focus(); }, 0); return; }
+    if (act === 'close') { state.openId = null; state.armedDelete = false; renderDrawer(); return; }
+    if (!it) return;
+    if (act === 'toggle' || act === 'toggleDrawer') { const done = !it.done; saveItem(id, { done, doneAt: done ? new Date().toISOString() : '' }); if (act === 'toggleDrawer') renderDrawer(); return; }
+    if (act === 'done') { saveItem(id, { done: true, doneAt: new Date().toISOString() }); return; }
+    if (act === 'seen') { saveItem(id, { seenAt: new Date().toISOString() }); return; }
+    if (act === 'snooze') { snooze(id, t.dataset.when); if (state.openId) renderDrawer(); return; }
+    if (act === 'addNote') {
+      const v = $('#dNewNote').value.trim(); if (!v) return;
+      saveItem(id, { notes: [...(it.notes || []), { at: new Date().toISOString(), text: v }] }); renderDrawer(); return;
+    }
+    if (act === 'saveDrawer') {
+      const title = $('#dTitle').value.trim(); if (!title) { $('#dTitle').focus(); return; }
+      const rv = $('#dRemind').value;
+      const remindAt = rv ? new Date(rv).toISOString() : '';
+      const patch = { title, date: $('#dDate').value || it.date, time: $('#dTime').value, type: $('#dType').value,
+        priority: $('#dHigh').checked ? 'yuksek' : 'normal', note: $('#dNote').value.trim() };
+      if (remindAt !== (nextRemind(it) || '')) Object.assign(patch, { remindAt, snoozedUntil: '', seenAt: '', notifiedAt: '' });
+      saveItem(id, patch); renderDrawer(); return;
+    }
+    if (act === 'assign') {
+      const kisi = $('#dKisi').value.trim(); if (!kisi) { $('#dKisi').focus(); return; }
+      const gid = 'g' + newId().slice(1);
+      const now = new Date().toISOString();
+      const gbody = { id: gid, kisi, birim: $('#dBirim').value.trim(), baslik: it.title, detay: it.note || '',
+        verilisTarihi: todayStr(), bitisTarihi: it.date, ilkBitisTarihi: it.date, saat: it.time || '', durum: it.done ? 'tamamlandi' : 'suruyor',
+        tamamlanmaTarihi: it.done ? todayStr() : '', oncelik: it.priority === 'yuksek' ? 'yuksek' : 'normal', uzatmalar: [], ekGorevler: [],
+        notlar: (it.notes || []).map(n => ({ at: n.at, text: n.text })), degerlendirme: { puan: 0, yorum: '', at: '' },
+        remindAt: it.remindAt || remind9(it.date), snoozedUntil: it.snoozedUntil || '', seenAt: '', notifiedAt: '',
+        kaynak: it.source || 'elle', createdAt: it.createdAt || now, updatedAt: now };
+      state.gorevler.set(gid, gbody); state.items.delete(id);
+      write('gorevler/' + gid, () => gorevRef(gid).set(gbody)).then(() => write('items/' + id, () => itemRef(id).delete()));
+      state.openId = null; state.openGorev = gid; render(); renderDrawer(); return;
+    }
+    if (act === 'delete') {
+      if (!state.armedDelete) { state.armedDelete = true; renderDrawer(); return; }
+      state.items.delete(id); state.openId = null; state.armedDelete = false;
+      write('items/' + id, () => itemRef(id).delete()); render(); return;
+    }
+  });
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && (state.openId || state.openGorev)) { state.openId = null; state.openGorev = null; state.armedDelete = false; renderDrawer(); } });
+
+  // Görev filtreleri ve yeni görev formu
+  document.addEventListener('change', e => {
+    const id = e.target.id;
+    if (id === 'gfKisi') { gState.kisi = e.target.value; saveGFilter(); render(true); }
+    else if (id === 'gfBirim') { gState.birim = e.target.value; saveGFilter(); render(true); }
+    else if (id === 'gfPeriod') { gState.period = e.target.value; saveGFilter(); render(true); }
+  });
+  let qTimer;
+  document.addEventListener('input', e => {
+    if (e.target.id !== 'gfQ') return;
+    clearTimeout(qTimer);
+    qTimer = setTimeout(() => { gState.q = e.target.value; render(true); }, 250);
+  });
+  document.addEventListener('submit', e => {
+    if (e.target.id !== 'gForm') return;
+    e.preventDefault();
+    if (!state.db) return;
+    const v = s => document.getElementById(s).value.trim();
+    const kisi = v('gKisi'), baslik = v('gBaslik'), bitis = v('gBitis');
+    if (!kisi || !baslik || !bitis) return;
+    const id = 'g' + newId().slice(1);
+    const now = new Date().toISOString();
+    const body = { id, kisi, birim: v('gBirim'), baslik, detay: v('gDetay'), verilisTarihi: v('gVerilis') || todayStr(),
+      bitisTarihi: bitis, ilkBitisTarihi: bitis, durum: 'suruyor', tamamlanmaTarihi: '', oncelik: document.getElementById('gOncelik').checked ? 'yuksek' : 'normal',
+      uzatmalar: [], ekGorevler: [], notlar: [], degerlendirme: { puan: 0, yorum: '', at: '' },
+      remindAt: remind9(bitis), snoozedUntil: '', seenAt: '', notifiedAt: '', kaynak: 'elle', createdAt: now, updatedAt: now };
+    state.gorevler.set(id, body);
+    write('gorevler/' + id, () => gorevRef(id).set(body));
+    gState.filter = 'suren'; saveGFilter();
+    document.activeElement && document.activeElement.blur && document.activeElement.blur();
+    render(true);
+  });
+
+  // Plan / günlük not: yazmayı bıraktıktan 1 sn sonra kaydet.
+  const planTimers = new Map();
+  document.addEventListener('input', e => {
+    const key = e.target.dataset && e.target.dataset.plan;
+    if (!key || !state.db) return;
+    clearTimeout(planTimers.get(key));
+    const lbl = document.getElementById('saved-' + key); if (lbl) lbl.textContent = 'Kaydediliyor…';
+    planTimers.set(key, setTimeout(() => {
+      const body = { text: e.target.value, updatedAt: new Date().toISOString() };
+      state.plans.set(key, body);
+      write('plans/' + key, () => planRef(key).set(body)).then(() => { const l = document.getElementById('saved-' + key); if (l) l.textContent = 'Kaydedildi · ' + hm(body.updatedAt); });
+    }, 1000));
+  });
+  document.addEventListener('focusout', e => { if (e.target.dataset && e.target.dataset.plan) setTimeout(render, 1200); });
+
+  $('#addForm').addEventListener('submit', e => {
+    e.preventDefault();
+    if (!state.db) return;
+    const title = $('#fTitle').value.trim(); if (!title) return;
+    const date = $('#fDate').value || state.cursor;
+    const time = $('#fTime').value;
+    const kisi = $('#fKisi').value.trim();
+    if (kisi) {
+      // Kişiye verilen iş: Görevler'de kişi bazlı takip edilir.
+      const gid = 'g' + newId().slice(1);
+      const now = new Date().toISOString();
+      const gbody = { id: gid, kisi, birim: $('#fBirim').value.trim(), baslik: title, detay: $('#fNote').value.trim(),
+        verilisTarihi: todayStr(), bitisTarihi: date, ilkBitisTarihi: date, saat: time, durum: 'suruyor', tamamlanmaTarihi: '',
+        oncelik: $('#fHigh').checked ? 'yuksek' : 'normal', uzatmalar: [], ekGorevler: [], notlar: [], degerlendirme: { puan: 0, yorum: '', at: '' },
+        remindAt: computeRemind(date, time, $('#fRemind').value) || remind9(date), snoozedUntil: '', seenAt: '', notifiedAt: '',
+        kaynak: 'elle', createdAt: now, updatedAt: now };
+      state.gorevler.set(gid, gbody);
+      write('gorevler/' + gid, () => gorevRef(gid).set(gbody));
+      e.target.reset(); $('#fDate').value = date; state.cursor = date; state.miniMonth = date.slice(0, 7); render();
+      return;
+    }
+    const id = newId();
+    const body = { id, title, type: $('#fType').value, date, time, note: $('#fNote').value.trim(),
+      priority: $('#fHigh').checked ? 'yuksek' : 'normal', remindAt: computeRemind(date, time, $('#fRemind').value),
+      snoozedUntil: '', seenAt: '', notifiedAt: '', done: false, doneAt: '', notes: [], source: 'elle',
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    state.items.set(id, body);
+    write('items/' + id, () => itemRef(id).set(body));
+    e.target.reset(); $('#fDate').value = date; state.cursor = date; state.miniMonth = date.slice(0, 7); render();
+  });
+  $('#fDate').value = state.cursor;
+
+  render();
+  setInterval(() => { if (!document.activeElement || !document.activeElement.closest || !document.activeElement.closest('.drawer, textarea, form')) render(); else renderAlerts(); }, 30000);
+
+  // ---------- Veritabanı ----------
+  (async () => {
+    const db = window.claude && window.claude.use ? await window.claude.use('db') : null;
+    if (!db) {
+      document.getElementById('lockHelp').textContent = 'Ajanda yalnızca claude.ai hesabınızla giriş yapmışken açılır.';
+      document.getElementById('lockForm').querySelectorAll('input, button').forEach(el => { el.hidden = true; });
+      state.noDb = true; render();
+      setStatus('Ajanda verilerine ulaşılamadı. Sayfayı claude.ai üzerinde, hesabınızla giriş yapmışken açın. Özel günler yine görünür.');
+      document.querySelectorAll('#addForm input, #addForm select, #addForm textarea, #addForm button').forEach(el => el.disabled = true);
+      return;
+    }
+    state.db = db;
+    setStatus('');
+    await setupLock(db);
+  })();
+
+  // Kilit açıldıktan sonra verileri yükle; kilitlenince bağlantıları kes ve ekrandan sil.
+  let unsubs = [];
+  function startData(db) {
+    let firstItems = true;
+    unsubs.push(db.collection('items').onSnapshot(snap => {
+      const m = new Map();
+      for (const d of snap.docs) { const v = d.data(); if (v) m.set(d.id, { ...v, id: d.id }); }
+      state.items = m;
+      if (firstItems) { firstItems = false; state.ready = true; setStatus(''); }
+      render();
+    }, err => setStatus('Ajanda bağlantısı koptu. Sayfayı yenileyin.' + (err && err.code ? ' (' + err.code + ')' : ''))));
+    unsubs.push(db.collection('gorevler').onSnapshot(snap => {
+      const m = new Map();
+      for (const d of snap.docs) { const v = d.data(); if (v) m.set(d.id, { ...v, id: d.id }); }
+      state.gorevler = m;
+      render();
+    }, () => {}));
+    unsubs.push(db.collection('plans').onSnapshot(snap => {
+      const m = new Map();
+      for (const d of snap.docs) { const v = d.data(); if (v) m.set(d.id, v); }
+      state.plans = m;
+      render();
+    }, () => {}));
+  }
+  function stopData() {
+    unsubs.forEach(u => { try { u(); } catch (e) {} });
+    unsubs = [];
+    state.items = new Map(); state.gorevler = new Map(); state.plans = new Map();
+    state.ready = false; state.openId = null; state.openGorev = null;
+    renderDrawer(); render(true);
+  }
+
+  // ---------- PIN kilidi ----------
+  const IDLE_MS = 10 * 60 * 1000, HIDDEN_MS = 5 * 60 * 1000, ITER = 250000;
+  const b64e = u8 => btoa(String.fromCharCode(...u8));
+  const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  async function pinHash(pin, saltB64, iter) {
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']);
+    const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: b64d(saltB64), iterations: iter, hash: 'SHA-256' }, key, 256);
+    return b64e(new Uint8Array(bits));
+  }
+  const lockEl = document.getElementById('lock');
+  let lockRec = null, unlocked = false, fails = 0, waitUntil = 0, idleTimer = null, hiddenAt = 0;
+
+  function showLock(mode, msg) {
+    unlocked = false;
+    document.body.classList.add('locked');
+    lockEl.hidden = false;
+    const setup = mode === 'setup';
+    lockEl.querySelector('h2').textContent = setup ? 'Ajanda PIN\'inizi belirleyin' : 'Emre\'nin Ajandası kilitli';
+    lockEl.querySelector('#lockHelp').textContent = setup
+      ? 'En az 6 haneli bir PIN seçin. PIN sadece bu ajandayı açar; Claude dahil kimse göremez, yalnızca geri çözülemeyen özeti saklanır.'
+      : 'Devam etmek için PIN\'inizi girin.';
+    document.getElementById('lockPin2Row').hidden = !setup;
+    lockEl.dataset.mode = mode;
+    document.getElementById('lockMsg').textContent = msg || '';
+    document.getElementById('lockPin').value = ''; document.getElementById('lockPin2').value = '';
+    setTimeout(() => document.getElementById('lockPin').focus(), 50);
+  }
+  function hideLock() {
+    unlocked = true; fails = 0;
+    lockEl.hidden = true;
+    document.body.classList.remove('locked');
+    resetIdle();
+  }
+  function lockNow(reason) {
+    if (!unlocked) return;
+    stopData();
+    showLock('unlock', reason || '');
+  }
+  function resetIdle() {
+    clearTimeout(idleTimer);
+    if (unlocked) idleTimer = setTimeout(() => lockNow('10 dakika işlem yapılmadığı için kilitlendi.'), IDLE_MS);
+  }
+  ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev => document.addEventListener(ev, () => { if (unlocked) resetIdle(); }, { passive: true }));
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) hiddenAt = Date.now();
+    else if (unlocked && hiddenAt && Date.now() - hiddenAt > HIDDEN_MS) lockNow('Sayfa arka planda kaldığı için kilitlendi.');
+  });
+
+  async function setupLock(db) {
+    if (!(window.crypto && crypto.subtle)) {
+      showLock('unlock', 'Bu tarayıcı güvenli PIN kilidini desteklemiyor; ajanda açılmadı. Safari ya da Chrome\'un güncel sürümünü kullanın.');
+      document.getElementById('lockForm').querySelectorAll('input, button').forEach(el => { el.hidden = true; });
+      return;
+    }
+    const ref = db.doc('ayarlar/kilit');
+    let snap;
+    try { snap = await ref.get(); } catch (e) { setStatus('Kilit bilgisi okunamadı. Sayfayı yenileyin.'); showLock('unlock', 'Bağlantı hatası.'); return; }
+    lockRec = snap.exists ? snap.data() : null;
+    showLock(lockRec && lockRec.hash ? 'unlock' : 'setup');
+    document.getElementById('lockForm').addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const msg = document.getElementById('lockMsg');
+      const pin = document.getElementById('lockPin').value;
+      if (Date.now() < waitUntil) { msg.textContent = `Çok fazla hatalı deneme. ${Math.ceil((waitUntil - Date.now()) / 1000)} sn bekleyin.`; return; }
+      if (lockEl.dataset.mode === 'setup') {
+        if (!/^\d{6,12}$/.test(pin)) { msg.textContent = 'PIN 6–12 haneli rakamlardan oluşmalı.'; return; }
+        if (pin !== document.getElementById('lockPin2').value) { msg.textContent = 'İki PIN aynı değil.'; return; }
+        const salt = b64e(crypto.getRandomValues(new Uint8Array(16)));
+        msg.textContent = 'Kaydediliyor…';
+        const rec = { salt, hash: await pinHash(pin, salt, ITER), iter: ITER, createdAt: new Date().toISOString() };
+        try { await ref.set(rec); } catch (e) { msg.textContent = 'PIN kaydedilemedi, tekrar deneyin.'; return; }
+        lockRec = rec; hideLock(); startData(db); return;
+      }
+      msg.textContent = 'Kontrol ediliyor…';
+      const h = await pinHash(pin, lockRec.salt, lockRec.iter || ITER);
+      if (h === lockRec.hash) { hideLock(); startData(db); return; }
+      fails += 1;
+      if (fails >= 5) waitUntil = Date.now() + Math.min(30000 * 2 ** (fails - 5), 15 * 60000);
+      msg.textContent = fails >= 5 ? `Hatalı PIN. ${Math.ceil((waitUntil - Date.now()) / 1000)} sn bekleyin.` : `Hatalı PIN (${fails}/5).`;
+      document.getElementById('lockPin').value = '';
+    });
+    document.getElementById('lockBtn').hidden = false;
+    document.getElementById('lockBtn').addEventListener('click', () => lockNow('Kilitlendi.'));
+  }
+})();
+</script>

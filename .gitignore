@@ -1,0 +1,8 @@
+# Gerçek mail içerikleri ve kişisel veriler: GitHub'a gönderilmez
+raporlar/*
+.son_cekim.txt
+.ara_kontrol.txt
+ajanda/.ajanda_komutlari.txt
+mail.conf
+.DS_Store
+CLAUDE.md
