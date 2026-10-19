@@ -536,6 +536,7 @@
     return best ? best.kisiMail : '';
   };
   const MAIL_RE = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/;
+  const MAIL_TYPO = /\.(con|cmo|ocm|comm|coom|vom|xom|cpm|co\.t|com\.t)$|@(gmial|gmal|gamil|hotmial|hotmal|outlok)\./i;
   const remind9 = date => { if (!date) return ''; const d = parse(date); d.setHours(9, 0, 0, 0); return d.toISOString(); };
   const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
   const isLate = g => g.durum === 'suruyor' && g.bitisTarihi && g.bitisTarihi < todayStr();
@@ -778,6 +779,7 @@
       if (!window.EA_NO_PIN || state.mailSending) return;
       const to = val('gdMail');
       if (!MAIL_RE.test(to)) { alert('Geçerli bir mail adresi yazın.'); document.getElementById('gdMail').focus(); return; }
+      if (MAIL_TYPO.test(to)) { alert(to + ' adresinde yazım hatası var gibi görünüyor (ör. .con yerine .com). Lütfen düzeltin.'); document.getElementById('gdMail').focus(); return; }
       if (!confirm('"' + (g.baslik || 'Görev') + '" görevi ' + to + ' adresine sizin mailinizden gönderilsin mi?')) return;
       state.mailSending = true; renderDrawer();
       const csrf = (document.querySelector('meta[name="csrf"]') || {}).content || '';

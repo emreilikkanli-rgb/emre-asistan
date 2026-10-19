@@ -10,6 +10,8 @@ from xml.sax.saxutils import escape
 from .ews import Ews
 
 MAIL_RE = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
+# Sık yapılan alan adı yazım hataları (ör. .con): bu adreslere gönderilmez.
+MAIL_TYPO = re.compile(r"\.(con|cmo|ocm|comm|coom|vom|xom|cpm|co\.t|com\.t)$|@(gmial|gmal|gamil|hotmial|hotmal|outlok)\.", re.I)
 
 _CREATE = """<m:CreateItem MessageDisposition="SendAndSaveCopy">
    <m:SavedItemFolderId><t:DistinguishedFolderId Id="sentitems"/></m:SavedItemFolderId>
@@ -27,4 +29,6 @@ def send(ews: Ews, to, subject, html):
     to = (to or "").strip()
     if not MAIL_RE.match(to):
         raise ValueError("Geçersiz mail adresi")
+    if MAIL_TYPO.search(to):
+        raise ValueError("Adreste yazım hatası var gibi görünüyor (ör. .con yerine .com)")
     ews._call(_CREATE.format(subject=escape(subject[:250]), body=escape(html), to=escape(to)))

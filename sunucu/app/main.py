@@ -364,6 +364,8 @@ async def gorev_mail(request: Request, doc_id: str):
         return PlainTextResponse("Geçersiz istek", status_code=400)
     if not ews_gonder.MAIL_RE.match(to):
         return PlainTextResponse("Geçersiz mail adresi", status_code=400)
+    if ews_gonder.MAIL_TYPO.search(to):
+        return PlainTextResponse("%s adresinde yazım hatası var gibi görünüyor (ör. .con yerine .com)." % to, status_code=400)
     gecmis = g.get("mailGonderimleri") or []
     simdi = datetime.now(timezone.utc)
     if gecmis and (simdi - datetime.fromisoformat(gecmis[-1]["at"].replace("Z", "+00:00"))).total_seconds() < 60:
