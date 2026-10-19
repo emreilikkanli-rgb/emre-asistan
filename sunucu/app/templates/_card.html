@@ -1,5 +1,5 @@
-{% macro card(c, cls, links, rid) %}
-  <article class="card {{ cls }}">
+{% macro card(c, cls, links, rid, kid='') %}
+  <article class="card {{ cls }}"{% if kid %} id="{{ kid }}"{% endif %}>
     <div class="top"><h3>{{ c.baslik }}</h3><span class="meta">{{ c.zaman }}</span></div>
     {% if c.kim %}<div class="meta">{{ c.kim }}</div>{% endif %}
     <p>{{ c.ozet }}</p>
@@ -12,4 +12,32 @@
     {% for ref in c.refs[:3] %}{% if links[ref|string] %}<a class="open read" href="/mail/{{ rid }}/{{ ref }}">{{ 'Maili oku' if loop.first else (loop.index ~ '. maili oku') }}</a>{% endif %}{% endfor %}
     {% if c.refs and links[c.refs[0]|string] %}<a class="open" href="{{ links[c.refs[0]|string] }}" target="_blank" rel="noopener noreferrer">Outlook'ta aç ↗</a>{% endif %}
   </article>
+{% endmacro %}
+{% macro satir(c, links, rid, kid, rozet='') %}
+  {% set ref = (c.refs or [])[0] %}
+  {% set href = ('/mail/' ~ rid ~ '/' ~ ref) if (ref is not none and links[ref|string]) else ('#' ~ kid) %}
+  <li><a class="p-row" href="{{ href }}">
+    <span class="p-main">
+      <b>{{ c.baslik }}</b>
+      <span class="p-meta">{% if rozet %}<span class="p-badge">{{ rozet }}</span>{% endif %}{{ c.kim }}{% if c.kim and c.zaman %} · {% endif %}{{ c.zaman }}</span>
+      {% if c.ozet %}<span class="p-ozet">{{ c.ozet }}</span>{% endif %}
+      <span class="p-tags">{% for k in (c.kisiler or [])[:2] %}<span class="kisi">{{ k }}</span>{% endfor %}{% for t in c.etiketler or [] %}{% if 'son tarih' in t|lower or 'rehber' in t|lower %}<span>{{ t }}</span>{% endif %}{% endfor %}</span>
+    </span>
+    <span class="p-go">{{ 'Maili oku' if href.startswith('/mail/') else 'Ayrıntı' }} ›</span>
+  </a></li>
+{% endmacro %}
+
+{# rows: [{c, kid, rozet}] · bolum: ayrıntı bölümünün kimliği #}
+{% macro pano(pid, baslik, aciklama, ikon, renk, rows, links, rid, bolum, bos) %}
+  <section class="p-card" id="{{ pid }}" style="--c: var(--{{ renk }}); --cbg: var(--{{ renk }}-bg)">
+    <header class="p-head">
+      <span class="p-ikon" aria-hidden="true">{{ ikon }}</span>
+      <div><h3>{{ baslik }}</h3><p>{{ aciklama }}</p></div>
+      <span class="p-say">{{ rows|length }}</span>
+    </header>
+    {% if rows %}
+      <ul class="p-list">{% for r in rows[:6] %}{{ satir(r.c, links, rid, r.kid, r.rozet) }}{% endfor %}</ul>
+      {% if rows|length > 6 %}<a class="p-more" href="#{{ bolum }}">+{{ rows|length - 6 }} konu daha · tümünü gör ›</a>{% endif %}
+    {% else %}<p class="p-bos">{{ bos }}</p>{% endif %}
+  </section>
 {% endmacro %}
