@@ -76,7 +76,6 @@
     .grid > .side > .panel { order: 2; }
     .grid > .side > .panel:first-child { order: 0; }
     .grid > .main { order: 1; }
-    .day-panel.only-wide { display: none; }
   }
 
   .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
@@ -154,10 +153,6 @@
   .day-col header { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
   .day-col header button { border: 0; background: transparent; padding: 0; font-family: var(--font-display); font-weight: 700; font-size: 15px; }
   .mini-item { border: 0; text-align: left; background: var(--surface-2); border-radius: 6px; padding: 4px 8px; font-size: 13px; overflow-wrap: anywhere; }
-  .day-panel { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); display: grid; gap: 6px; }
-  .day-panel h3 { margin: 0; font-size: 14px; }
-  .day-panel .label { margin-top: 4px; }
-  .day-panel .plan-text { white-space: pre-wrap; font-size: 13px; background: var(--surface-2); border-radius: 6px; padding: 6px 8px; max-height: 9em; overflow: auto; }
   .mini-item.done { text-decoration: line-through; color: var(--muted); }
   .mini-item.high { box-shadow: inset 3px 0 0 var(--red); }
 
@@ -287,14 +282,13 @@
 
   <div class="grid">
     <aside class="side">
-      <div class="panel">
+      <div class="panel" id="calPanel">
         <div class="mini-head">
           <button class="icon-btn" type="button" id="miniPrev" aria-label="Önceki ay">‹</button>
           <b id="miniTitle"></b>
           <button class="icon-btn" type="button" id="miniNext" aria-label="Sonraki ay">›</button>
         </div>
         <div class="mini" id="mini"></div>
-        <div class="day-panel" id="dayPanel" aria-live="polite"></div>
       </div>
 
       <div class="panel">
@@ -1033,28 +1027,6 @@
     $('#mini').innerHTML = html;
   }
 
-  function renderDayPanel() {
-    const s = state.cursor;
-    const isToday = s === todayStr();
-    const its = itemsOn(s);
-    const late = isToday ? [...state.items.values()].filter(i => !i.done && i.type !== 'not' && i.date < s) : [];
-    const gb = gorevBitisOn(s);
-    const gl = isToday ? [...state.gorevler.values()].filter(isLate) : [];
-    const plan = state.plans.get('gun-' + s);
-    const btn = i => `<button type="button" class="mini-item ${i.done ? 'done' : ''} ${i.priority === 'yuksek' ? 'high' : ''}" data-act="open" data-id="${esc(i.id)}">${i.time ? `<span class="mono">${esc(i.time)}</span> ` : ''}${i.type === 'toplanti' ? '👥 ' : i.type === 'not' ? '📝 ' : ''}${esc(i.title)}</button>`;
-    const gbtn = g => `<button type="button" class="mini-item g" data-gact="open" data-gid="${esc(g.id)}">📋 ${esc(g.kisi || '')} · ${esc(g.baslik)}${isLate(g) ? ' (gecikti)' : ''}</button>`;
-    const bos = !its.length && !late.length && !gb.length && !gl.length && !(plan && plan.text);
-    $('#dayPanel').classList.toggle('only-wide', state.view === 'gun');
-    $('#dayPanel').innerHTML = `<h3>${esc(longDate(parse(s)))}${isToday ? ' · Bugün' : ''}</h3>
-      ${holChips(s)}
-      ${late.length ? `<span class="label">Gecikmiş işler</span>${late.map(btn).join('')}` : ''}
-      ${its.length ? `<span class="label">Toplantılar, görevler ve notlar</span>${its.map(btn).join('')}` : ''}
-      ${gb.length || gl.length ? `<span class="label">Verilen görevler · bitiş</span>${[...gl, ...gb].map(gbtn).join('')}` : ''}
-      ${plan && plan.text ? `<span class="label">Günlük not</span><div class="plan-text">${esc(plan.text)}</div>` : ''}
-      ${bos ? `<p class="empty">${state.ready ? 'Bu gün için kayıt yok.' : 'Kayıtlar yükleniyor…'}</p>` : ''}
-      ${state.view !== 'gun' ? `<button class="btn" type="button" data-gotoday="${esc(s)}">Günün tamamını aç</button>` : ''}`;
-  }
-
   function renderSide() {
     const now = Date.now();
     const soon = [...state.items.values()].filter(i => !i.done && nextRemind(i) && Date.parse(nextRemind(i)) > now)
@@ -1171,7 +1143,8 @@
       if (newOpen && document.getElementById('gNewBox')) document.getElementById('gNewBox').open = true;
       if (fid) { const n = document.getElementById(fid); if (n) { n.focus(); try { if (sel) n.setSelectionRange(sel[0], sel[1]); } catch (e) {} } }
     }
-    renderMini(); renderDayPanel(); renderSide(); renderAlerts();
+    $('#calPanel').hidden = state.view !== 'gun';
+    renderMini(); renderSide(); renderAlerts();
     if (!$('#overlay').hidden || state.openId || state.openGorev) {
       const a = document.activeElement;
       if (!(a && a.closest && a.closest('.drawer'))) renderDrawer();
@@ -1186,7 +1159,6 @@
     if (t.dataset.gfilter) { gState.filter = t.dataset.gfilter; saveGFilter(); render(true); return; }
     if (t.dataset.gkisi) { gState.kisi = t.dataset.gkisi; gState.filter = 'tum'; saveGFilter(); render(true); return; }
     if (t.dataset.view) { state.view = t.dataset.view; try { localStorage.setItem('ajanda.view', state.view); } catch (err) {} render(true); return; }
-    if (t.dataset.gotoday) { state.cursor = t.dataset.gotoday; state.view = 'gun'; render(true); $('#main').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (t.dataset.goto) { state.cursor = t.dataset.goto; state.miniMonth = state.cursor.slice(0, 7); if (state.view === 'ozel' || t.closest('.cell') || t.closest('.day-col')) state.view = 'gun'; render(); return; }
     if (t.dataset.nav !== undefined) {
       const n = Number(t.dataset.nav);
