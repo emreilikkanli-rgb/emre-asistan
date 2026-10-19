@@ -11,7 +11,7 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import ajanda as ajanda_mod, auth, db, ews_gonder, jobs
+from . import ajanda as ajanda_mod, auth, db, ews_gonder, jobs, moduller
 from .analyze import tekillestir
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -201,8 +201,39 @@ def ana(request: Request):
     if redir:
         return redir
     simdi = datetime.now(TZ)
-    return _page(request, "ana.html", sid, r=db.get_report(), gun=ajanda_mod.today_summary(), yaklasan=ajanda_mod.upcoming(3),
+    gun = ajanda_mod.today_summary()
+    p = _pano(db.get_report())
+    rozet = {
+        "ajanda": len([i for i in gun["bugun"] if not i.get("done")]) + len(gun["geciken"]),
+        "mailler": len(p.get("sikayet", [])) + len(p.get("odeme", [])) + len([c for c in p.get("takip", []) if c.get("_aksiyon")]),
+        "is-planlama": len(gun["g_bugun"]) + len(gun["g_gec"]),
+    }
+    parcalar = []
+    if rozet["ajanda"]:
+        parcalar.append("ajandada %d iş" % rozet["ajanda"])
+    if rozet["is-planlama"]:
+        parcalar.append("%d görev bitişi" % rozet["is-planlama"])
+    if rozet["mailler"]:
+        parcalar.append("%d önemli mail" % rozet["mailler"])
+    h = simdi.hour
+    selam = "İyi geceler" if h < 5 else "Günaydın" if h < 12 else "İyi günler" if h < 18 else "İyi akşamlar" if h < 22 else "İyi geceler"
+    return _page(request, "ana.html", sid, moduller=moduller.MODULLER, gruplar=moduller.GRUPLAR, rozet=rozet,
+                 ozet=("Bugün: " + ", ".join(parcalar)) if parcalar else "",
+                 selam=selam, saat=simdi.strftime("%H:%M"), gun_no=simdi.day, gun_ad=["PZT", "SAL", "ÇAR", "PER", "CUM", "CMT", "PAZ"][simdi.weekday()],
                  simdi="%d %s %d, %s" % (simdi.day, AYLAR[simdi.month - 1], simdi.year, GUNLER[simdi.weekday()]))
+
+
+@app.get("/m/{slug}", response_class=HTMLResponse)
+def modul(request: Request, slug: str):
+    sid, redir = _guard(request)
+    if redir:
+        return redir
+    m = moduller.BY_SLUG.get(slug)
+    if not m:
+        return RedirectResponse("/", status_code=303)
+    if m["hazir"]:
+        return RedirectResponse(m["href"], status_code=303)
+    return _page(request, "modul.html", sid, m=m)
 
 
 def _pano(r):

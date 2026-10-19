@@ -1,0 +1,25 @@
+{% from "_ikonlar.html" import ikon %}<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b0a1a">
+<title>{{ m.ust }} {{ m.ad }} · Emre'nin Asistanı</title>
+{% include "_ana_stil.html" %}
+</head>
+<body>
+<div class="sahne" aria-hidden="true"><div class="bulut b1"></div><div class="bulut b2"></div><div class="bulut b3"></div><div class="izgara"></div></div>
+<div class="ekran">
+  <header class="ust"><a class="marka" href="/"><span class="logo"><span>EA</span></span><span>Emre'nin Asistanı</span></a></header>
+  <section class="modul">
+    {{ ikon(m.slug) }}
+    <h1><small>{{ m.ust }}</small>{{ m.ad }}</h1>
+    <p>{{ m.aciklama }}</p>
+    <span class="etiket-yakinda">Yakında</span>
+    {% if m.planlanan %}<ul class="plan">{% for p in m.planlanan %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+    <a class="geri" href="/">← Ana ekrana dön</a>
+  </section>
+</div>
+</body>
+</html>

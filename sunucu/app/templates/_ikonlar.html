@@ -1,0 +1,49 @@
+{# Ana ekran uygulama ikonları. Her ikon: renkli zemin (squircle) + beyaz çizim. #}
+{% macro ikon(slug, gun_no='', gun_ad='') %}
+{% set renk = {
+  'ajanda': ('#ff5f6d', '#ffc371'), 'mailler': ('#4f8cff', '#38e1ff'), 'is-planlama': ('#ff9a3c', '#ff4f7b'),
+  'tr-haberler': ('#e3262f', '#ff6a5c'), 'dunya-haberleri': ('#3a43d6', '#21c7d9'), 'piyasalar': ('#0f9b6c', '#7be38f'),
+  'hava': ('#2f80ed', '#ffd166'), 'rotalar': ('#11998e', '#38ef7d'), 'hobiler': ('#b44cff', '#ff6fd8'),
+  'saglik': ('#ff4d6d', '#ffa36c'), 'notlar': ('#f7b733', '#fc4a1a'), 'ayarlar': ('#5b6475', '#9aa4b8')
+}[slug] %}
+<span class="ikon ikon-{{ slug }}" style="--g1: {{ renk[0] }}; --g2: {{ renk[1] }}" aria-hidden="true">
+  <span class="parlak"></span>
+  {% if slug == 'ajanda' %}
+    <span class="takvim"><b>{{ gun_ad }}</b><i>{{ gun_no }}</i></span>
+  {% elif slug == 'mailler' %}
+    <svg viewBox="0 0 64 64"><rect x="11" y="18" width="42" height="30" rx="6" fill="#fff"/><path d="M13 21l19 14 19-14" fill="none" stroke="#4f8cff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle class="nabiz" cx="50" cy="18" r="6.5" fill="#ffd166" stroke="#fff" stroke-width="2.5"/></svg>
+  {% elif slug == 'is-planlama' %}
+    <svg viewBox="0 0 64 64"><rect x="12" y="14" width="12" height="36" rx="4" fill="#fff" opacity=".95"/><rect x="26" y="14" width="12" height="26" rx="4" fill="#fff" opacity=".8"/><rect x="40" y="14" width="12" height="18" rx="4" fill="#fff" opacity=".65"/>
+      <path d="M15 22l2.5 2.5L22 20M15 32l2.5 2.5L22 30" fill="none" stroke="#ff6a5c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  {% elif slug == 'tr-haberler' %}
+    <svg viewBox="0 0 64 64"><rect x="12" y="13" width="36" height="40" rx="5" fill="#fff"/><rect x="44" y="21" width="9" height="32" rx="4" fill="#fff" opacity=".75"/>
+      <circle cx="26" cy="27" r="7" fill="#e3262f"/><circle cx="28.4" cy="27" r="5.6" fill="#fff"/><path d="M34.5 27l-3.6 1.2 2.2-3.1v3.8l-2.2-3.1z" fill="#e3262f"/>
+      <rect x="17" y="39" width="26" height="3" rx="1.5" fill="#f3b3b5"/><rect x="17" y="45" width="18" height="3" rx="1.5" fill="#f3b3b5"/></svg>
+  {% elif slug == 'dunya-haberleri' %}
+    <svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="17" fill="#fff"/><g fill="none" stroke="#3a43d6" stroke-width="2.2"><ellipse cx="32" cy="32" rx="7.5" ry="17"/><path d="M15 32h34M17.5 23h29M17.5 41h29"/></g>
+      <g class="yorunge"><ellipse cx="32" cy="32" rx="26" ry="9" fill="none" stroke="#fff" stroke-width="1.6" opacity=".7" transform="rotate(-20 32 32)"/><circle cx="56" cy="23.5" r="3.2" fill="#ffd166"/></g></svg>
+  {% elif slug == 'piyasalar' %}
+    <svg viewBox="0 0 64 64"><rect x="12" y="38" width="7" height="12" rx="2" fill="#fff" opacity=".7"/><rect x="23" y="31" width="7" height="19" rx="2" fill="#fff" opacity=".8"/><rect x="34" y="34" width="7" height="16" rx="2" fill="#fff" opacity=".9"/><rect x="45" y="22" width="7" height="28" rx="2" fill="#fff"/>
+      <path d="M12 30l11-8 11 5 15-13" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M43 13h7v7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  {% elif slug == 'hava' %}
+    <svg viewBox="0 0 64 64"><g class="gunes"><circle cx="38" cy="24" r="9" fill="#ffd166"/><g stroke="#ffe39a" stroke-width="2.6" stroke-linecap="round"><path d="M38 9v4M38 35v4M23 24h4M49 24h4M27.4 13.4l2.8 2.8M45.8 31.8l2.8 2.8M48.6 13.4l-2.8 2.8"/></g></g>
+      <path d="M20 50h24a9 9 0 0 0 0-18 12 12 0 0 0-22.5 4.5A7 7 0 0 0 20 50z" fill="#fff"/></svg>
+  {% elif slug == 'rotalar' %}
+    <svg viewBox="0 0 64 64"><path class="yol" d="M14 50c10 0 8-12 18-12s9-12 18-14" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 6"/>
+      <circle cx="14" cy="50" r="4" fill="#fff"/><path d="M47 9a9 9 0 0 1 9 9c0 7-9 15-9 15s-9-8-9-15a9 9 0 0 1 9-9z" fill="#fff"/><circle cx="47" cy="18" r="3.4" fill="#11998e"/></svg>
+  {% elif slug == 'hobiler' %}
+    <svg viewBox="0 0 64 64"><path d="M32 12c-12 0-21 8.5-21 19 0 9 7 15 14 15 3 0 4-2 4-4s-2-3.5 0-5.5 6-1 9-1c8 0 14-4 14-10C52 19 43 12 32 12z" fill="#fff"/>
+      <circle cx="22" cy="28" r="3.6" fill="#ff6fd8"/><circle cx="29" cy="20" r="3.6" fill="#ffd166"/><circle cx="39" cy="20" r="3.6" fill="#38e1ff"/><circle cx="45" cy="28" r="3.6" fill="#7be38f"/>
+      <path d="M44 41l8 11" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/><circle cx="53" cy="53" r="3" fill="#fff"/></svg>
+  {% elif slug == 'saglik' %}
+    <svg viewBox="0 0 64 64"><path class="kalp" d="M32 52S12 40 12 25.5A10.5 10.5 0 0 1 32 20a10.5 10.5 0 0 1 20 5.5C52 40 32 52 32 52z" fill="#fff"/>
+      <path d="M17 33h8l3-6 5 12 4-8h10" fill="none" stroke="#ff4d6d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  {% elif slug == 'notlar' %}
+    <svg viewBox="0 0 64 64"><rect x="14" y="11" width="32" height="42" rx="5" fill="#fff"/><rect x="19" y="20" width="22" height="3" rx="1.5" fill="#f9c784"/><rect x="19" y="28" width="22" height="3" rx="1.5" fill="#f9c784"/><rect x="19" y="36" width="14" height="3" rx="1.5" fill="#f9c784"/>
+      <path d="M50 22l4 4-15 15-6 2 2-6z" fill="#fff" stroke="#fc4a1a" stroke-width="1.6" stroke-linejoin="round"/></svg>
+  {% elif slug == 'ayarlar' %}
+    <svg viewBox="0 0 64 64"><g class="cark"><path d="M32 13l4 5 6-2 1 6 6 2-2 6 5 4-5 4 2 6-6 2-1 6-6-2-4 5-4-5-6 2-1-6-6-2 2-6-5-4 5-4-2-6 6-2 1-6 6 2z" fill="#fff"/><circle cx="32" cy="32" r="7" fill="#7a8396"/></g></svg>
+  {% endif %}
+</span>
+{% endmacro %}

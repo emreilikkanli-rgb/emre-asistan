@@ -1,45 +1,72 @@
-{% extends "base.html" %}
-{% block body %}
-{% set aktif = 'ana' %}{% include "_nav.html" %}
-<header>
-  <h1>Emre'nin Asistanı</h1>
-  <p>{{ simdi }}</p>
-</header>
+{% from "_ikonlar.html" import ikon %}<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b0a1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EA">
+<title>Emre'nin Asistanı</title>
+{% include "_ana_stil.html" %}
+</head>
+<body>
+<div class="sahne" aria-hidden="true"><div class="bulut b1"></div><div class="bulut b2"></div><div class="bulut b3"></div><div class="izgara"></div></div>
 
-<div class="hub">
-  <section class="hub-card">
-    <div class="hub-head"><span class="dot" style="background:var(--blue)"></span><h2>Emre'nin Ajandası</h2></div>
-    <div class="hub-stats">
-      <div><b>{{ gun.bugun|length }}</b><span>bugün</span></div>
-      <div class="{{ 'warn' if gun.geciken }}"><b>{{ gun.geciken|length }}</b><span>gecikmiş iş</span></div>
-      <div><b>{{ gun.g_bugun|length }}</b><span>bugün biten görev</span></div>
-      <div class="{{ 'warn' if gun.g_gec }}"><b>{{ gun.g_gec|length }}</b><span>geciken görev</span></div>
+<div class="ekran">
+  <header class="ust">
+    <a class="marka" href="/"><span class="logo"><span>EA</span></span><span>Emre'nin Asistanı</span></a>
+    <div class="ust-sag">
+      <a class="yuvarlak" href="/ayarlar" title="Ayarlar" aria-label="Ayarlar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </a>
+      <form method="post" action="/cikis"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="yuvarlak" type="submit" title="Çıkış" aria-label="Çıkış">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+        </button>
+      </form>
     </div>
-    {% if gun.bugun %}<ul class="hub-list">{% for i in gun.bugun[:5] %}<li><span class="t">{{ i.time or '—' }}</span>{{ i.title }}</li>{% endfor %}</ul>
-    {% else %}<p class="muted">Bugün için ajanda kaydı yok.</p>{% endif %}
-    {% if gun.g_gec %}<p class="hub-note">Geciken görevler: {% for g in gun.g_gec[:4] %}<b>{{ g.kisi }}</b> · {{ g.baslik }} ({{ g._gun }} gün){{ ', ' if not loop.last }}{% endfor %}</p>{% endif %}
-    {% if yaklasan %}<p class="hub-sub">Yaklaşan hatırlatmalar</p>
-    <ul class="hub-list">{% for y in yaklasan %}<li><span class="t">{{ y.zaman }}</span>{{ y.baslik }}</li>{% endfor %}</ul>{% endif %}
-    <div class="row hub-actions"><a class="btn primary" href="/ajanda">Ajandayı aç</a><a class="btn" href="/ajanda#gorevler">Görevler</a></div>
+  </header>
+
+  <section class="selam">
+    <p class="tarih">{{ simdi }}</p>
+    <h1><span id="selamMetni">{{ selam }}</span>, Emre Bey</h1>
+    <p class="saat" id="saat" aria-live="off">{{ saat }}</p>
+    {% if ozet %}<p class="ozet">{{ ozet }}</p>{% endif %}
   </section>
 
-  <section class="hub-card">
-    <div class="hub-head"><span class="dot" style="background:var(--teal)"></span><h2>Emre'nin Mailleri</h2></div>
-    {% if r %}{% set d = r.data %}
-    <p class="muted" style="margin-top:0">{{ 'Sabah raporu' if r.kind == 'sabah' else 'Ara kontrol' }} · {{ r.created_at | yerel }} · {{ r.stats.total }} mail tarandı</p>
-    <div class="hub-stats">
-      <div class="{{ 'warn' if d.sikayetler }}"><b>{{ d.sikayetler|length }}</b><span>şikâyet</span></div>
-      <div class="{{ 'warn' if d.odeme }}"><b>{{ d.odeme|length }}</b><span>ödeme / giriş riski</span></div>
-      <div><b>{{ d.oncelikli|length }}</b><span>öncelikli kişi</span></div>
-      <div><b>{{ d.aksiyon|length }}</b><span>aksiyon bekliyor</span></div>
+  {% for grup_id, grup_ad in gruplar %}
+  <section class="grup" style="--gecikme: {{ loop.index0 * 120 }}ms">
+    <h2>{{ grup_ad }}</h2>
+    <div class="izgara-ikon">
+      {% for m in moduller if m.grup == grup_id %}
+      <a class="uygulama {{ '' if m.hazir else 'yakinda' }}" href="{{ m.href if m.hazir else '/m/' ~ m.slug }}" style="--sira: {{ loop.index0 }}">
+        <span class="kap">
+          {{ ikon(m.slug, gun_no, gun_ad) }}
+          {% if rozet.get(m.slug) %}<span class="rozet">{{ rozet[m.slug] }}</span>{% endif %}
+        </span>
+        <span class="etiket"><small>{{ m.ust }}</small>{{ m.ad }}</span>
+        {% if not m.hazir %}<span class="yakinda-yazi">yakında</span>{% endif %}
+      </a>
+      {% endfor %}
     </div>
-    {% if d.bildirim %}<p class="hub-note">{{ d.bildirim }}</p>{% endif %}
-    <ul class="hub-list">
-      {% for c in (d.sikayetler + d.odeme + d.aksiyon)[:4] %}<li><span class="t">{{ c.zaman[:5] }}</span>{{ c.baslik }}</li>{% endfor %}
-    </ul>
-    {% else %}<p class="muted">Henüz mail raporu yok. İlk rapor sabah 08:30'da hazırlanır.</p>{% endif %}
-    <div class="row hub-actions"><a class="btn primary" href="/mailler">Son raporu aç</a><a class="btn" href="/raporlar">Tüm raporlar</a></div>
   </section>
+  {% endfor %}
+
+  <footer class="alt"><span class="nokta"></span>Kişisel asistanınız · <b>Claude</b> ile çalışır</footer>
 </div>
-<footer>Bu ay API harcaması: ${{ '%.2f' % aylik }} / ${{ ayarlar.aylik_limit_usd }} limit.</footer>
-{% endblock %}
+
+<script>
+  (function () {
+    var s = document.getElementById('saat'), m = document.getElementById('selamMetni');
+    function yaz() {
+      var d = new Date(), h = d.getHours();
+      s.textContent = String(h).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      m.textContent = h < 5 ? 'İyi geceler' : h < 12 ? 'Günaydın' : h < 18 ? 'İyi günler' : h < 22 ? 'İyi akşamlar' : 'İyi geceler';
+    }
+    yaz(); setInterval(yaz, 15000);
+  })();
+</script>
+</body>
+</html>
