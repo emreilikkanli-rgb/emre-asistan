@@ -1,4 +1,5 @@
 """Emre'nin Asistanı: mail raporları web uygulaması (Railway)."""
+import hmac
 import logging
 import os
 import threading
@@ -295,6 +296,28 @@ def api_delete(request: Request, col: str, doc_id: str):
         return err
     if _check(col, doc_id):
         db.doc_delete(col, doc_id)
+    return Response(status_code=204)
+
+
+@app.put("/api/claude/{col}/{doc_id}")
+async def api_claude_set(request: Request, col: str, doc_id: str):
+    """Claude'un "Ajandama ekle" kayıtları: oturum yerine EA_API_TOKEN ile, yalnızca yazma."""
+    token = os.environ.get("EA_API_TOKEN", "")
+    given = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    if len(token) < 32 or not hmac.compare_digest(token, given):
+        return PlainTextResponse("Yetkisiz", status_code=401)
+    if col not in ("items", "gorevler", "plans") or not _check(col, doc_id):
+        return PlainTextResponse("Geçersiz yol", status_code=400)
+    raw = await request.body()
+    if len(raw) > _MAX_DOC:
+        return PlainTextResponse("Kayıt çok büyük", status_code=413)
+    try:
+        body = _json.loads(raw)
+    except ValueError:
+        return PlainTextResponse("Geçersiz JSON", status_code=400)
+    if not isinstance(body, dict):
+        return PlainTextResponse("Kayıt bir nesne olmalı", status_code=400)
+    db.doc_set(col, doc_id, body)
     return Response(status_code=204)
 
 

@@ -29,7 +29,7 @@ window.EA_NO_PIN = true;
     });
   }
   function refreshAll() { Object.keys(subs).forEach(function (c) { refresh(c).catch(function () {}); }); }
-  setInterval(refreshAll, 20000);
+  setInterval(refreshAll, 5000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) refreshAll(); });
 
   function docRef(col, id) {
