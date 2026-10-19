@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block body %}
-{% from "_card.html" import card, pano %}
+{% from "_card.html" import pano %}
 {% set aktif = 'rapor' %}{% include "_nav.html" %}
 {% if not r %}
   <div class="note">Henüz rapor yok. İlk kontrol takvime göre çalışacak; isterseniz şimdi başlatın.</div>
@@ -16,29 +16,26 @@
   <p>{{ r.created_at | uzun_tarih }} · {{ s.period }} · <a href="/raporlar">Tüm raporlar</a></p>
 </header>
 
-{# Özet pano satırları: her satır ayrıntı kartına (kid) ve varsa maile bağlanır #}
-{% set r_vip = [] %}{% for c in d.oncelikli %}{% set _ = r_vip.append({'c': c, 'kid': 'oncelikli-' ~ loop.index, 'rozet': ''}) %}{% endfor %}
-{% set r_takip = [] %}{% for c in d.aksiyon %}{% set _ = r_takip.append({'c': c, 'kid': 'aksiyon-' ~ loop.index, 'rozet': 'Sizden bekleniyor'}) %}{% endfor %}
-{% for c in d.takip %}{% set _ = r_takip.append({'c': c, 'kid': 'takip-' ~ loop.index, 'rozet': ''}) %}{% endfor %}
-{% set r_ortak = [] %}{% for c in d.ortak %}{% set _ = r_ortak.append({'c': c, 'kid': 'ortak-' ~ loop.index, 'rozet': ''}) %}{% endfor %}
-{% set r_sik = [] %}{% for c in d.sikayetler %}{% set _ = r_sik.append({'c': c, 'kid': 'sikayet-' ~ loop.index, 'rozet': ''}) %}{% endfor %}
-{% set r_ode = [] %}{% for c in d.odeme %}{% set _ = r_ode.append({'c': c, 'kid': 'odeme-' ~ loop.index, 'rozet': ''}) %}{% endfor %}
-
+{# p: tekrarsız pano verisi (analyze.tekillestir). Her mail ve konu yalnızca bir başlıkta görünür. #}
 <nav class="stats" aria-label="Rapor özeti">
   <a class="stat" href="#gruplar"><b>{{ s.total }}</b><span>gelen mail</span></a>
-  <a class="stat" href="#p-vip" style="--c: var(--violet)"><b>{{ r_vip|length }}</b><span>önemli kişiler</span></a>
-  <a class="stat" href="#p-takip" style="--c: var(--amber)"><b>{{ r_takip|length }}</b><span>takip edilecek</span></a>
-  <a class="stat" href="#p-ortak" style="--c: var(--teal)"><b>{{ r_ortak|length }}</b><span>karşılıklı tartışma</span></a>
-  <a class="stat {{ 'alert' if r_sik }}" href="#p-sikayet" style="--c: var(--red)"><b>{{ r_sik|length }}</b><span>şikâyet</span></a>
-  <a class="stat" href="#p-odeme" style="--c: var(--orange)"><b>{{ r_ode|length }}</b><span>ödeme maili</span></a>
+  <a class="stat" href="#p-vip" style="--c: var(--violet)"><b>{{ p.vip|length }}</b><span>önemli kişiler</span></a>
+  <a class="stat" href="#p-takip" style="--c: var(--amber)"><b>{{ p.takip|length }}</b><span>takip edilecek</span></a>
+  <a class="stat" href="#p-ortak" style="--c: var(--teal)"><b>{{ p.ortak|length }}</b><span>karşılıklı tartışma</span></a>
+  <a class="stat {{ 'alert' if p.sikayet }}" href="#p-sikayet" style="--c: var(--red)"><b>{{ p.sikayet|length }}</b><span>şikâyet</span></a>
+  <a class="stat" href="#p-odeme" style="--c: var(--orange)"><b>{{ p.odeme|length }}</b><span>ödeme maili</span></a>
 </nav>
 
+{% if d.bildirim %}<div class="note">{{ d.bildirim }}</div>{% endif %}
+
 <div class="pano">
-  {{ pano('p-vip', 'Önemli kişiler', 'Öncelikli kişilerin yazdığı ya da karıştığı konular', '★', 'violet', r_vip, links, r.id, 'oncelikli', 'Öncelikli kişilerden önemli gelişme yok.') }}
-  {{ pano('p-takip', 'Takip edilmesi gereken mailler', 'Sizden cevap bekleyenler ve CC\'de süren işler', '⏱', 'amber', r_takip, links, r.id, 'takip', 'Takip gerektiren mail yok.') }}
-  {{ pano('p-ortak', 'Karşılıklı tartışmalar', 'Ortak adreslerde itiraz, ceza, no-show ve gerginlikler', '⇄', 'teal', r_ortak, links, r.id, 'ortak', 'Ortak maillerde öne çıkan tartışma yok.') }}
-  {{ pano('p-sikayet', 'Şikâyet mailleri', 'Misafir, acente ve rehber şikâyetleri, iade talepleri', '!', 'red', r_sik, links, r.id, 'sikayet', 'Bu dönemde şikâyet yok.') }}
-  {{ pano('p-odeme', 'Ödeme mailleri', 'Otel ve acentelerden ödeme talepleri, son tarihler, giriş riski', '₺', 'orange', r_ode, links, r.id, 'odeme', 'Ödeme talebi ya da giriş riski bildiren mail yok.') }}
+  {{ pano('p-vip', 'Önemli kişiler', 'Öncelikli kişilerin yazdığı ya da karıştığı konular', '★', 'violet', p.vip, links, r.id,
+          'Öncelikli kişilerden önemli gelişme yok.',
+          ((d.maili_olmayan_oncelikliler | join(' · ')) ~ ': bu dönemde mail yok.') if d.maili_olmayan_oncelikliler else '') }}
+  {{ pano('p-takip', 'Takip edilmesi gereken mailler', "Sizden cevap bekleyenler ve CC'de süren işler", '⏱', 'amber', p.takip, links, r.id, 'Takip gerektiren mail yok.') }}
+  {{ pano('p-ortak', 'Karşılıklı tartışmalar', 'Ortak adreslerde itiraz, ceza, no-show ve gerginlikler', '⇄', 'teal', p.ortak, links, r.id, 'Ortak maillerde öne çıkan tartışma yok.') }}
+  {{ pano('p-sikayet', 'Şikâyet mailleri', 'Misafir, acente ve rehber şikâyetleri, iade talepleri', '!', 'red', p.sikayet, links, r.id, 'Bu dönemde şikâyet yok.') }}
+  {{ pano('p-odeme', 'Ödeme mailleri', 'Otel ve acentelerden ödeme talepleri, son tarihler, giriş riski', '₺', 'orange', p.odeme, links, r.id, 'Ödeme talebi ya da giriş riski bildiren mail yok.') }}
 </div>
 
 {% if gun and not gun.bos %}
@@ -51,30 +48,9 @@
     {% for g in gun.g_gec %}<span class="tag person">{{ g.kisi }}</span> {{ g.baslik }} · <b style="color:var(--red)">{{ g._gun }} gün gecikti</b>{{ ';' if not loop.last }} {% endfor %}</p>{% endif %}
 </article>
 {% endif %}
-{% if d.bildirim %}<div class="note">{{ d.bildirim }}</div>{% endif %}
 
-<h2 class="detay-baslik">Ayrıntılar</h2>
-<h2 id="sikayet"><span class="dot" style="background:var(--red)"></span>Şikâyetler <small>tüm gelen kutusu, rehber şikâyetleri dahil</small></h2>
-{% for c in d.sikayetler %}{{ card(c, 'complaint', links, r.id, 'sikayet-' ~ loop.index) }}{% else %}<p class="quiet">Bu dönemde şikâyet yok.</p>{% endfor %}
-
-<h2 id="odeme"><span class="dot" style="background:var(--orange)"></span>Ödeme talepleri ve giriş riski</h2>
-{% for c in d.odeme %}{{ card(c, 'pay', links, r.id, 'odeme-' ~ loop.index) }}{% else %}<p class="quiet">Ödeme / giriş riski bildiren mail yok.</p>{% endfor %}
-
-<h2 id="oncelikli"><span class="dot" style="background:var(--violet)"></span>Öncelikli kişiler</h2>
-{% for c in d.oncelikli %}{{ card(c, 'vip', links, r.id, 'oncelikli-' ~ loop.index) }}{% else %}<p class="quiet">Öncelikli kişilerden önemli gelişme yok.</p>{% endfor %}
-{% if d.maili_olmayan_oncelikliler %}<p class="quiet">{{ d.maili_olmayan_oncelikliler | join(' · ') }}: bu dönemde mail yok.</p>{% endif %}
-
-<h2 id="ortak"><span class="dot" style="background:var(--teal)"></span>Ortak maillerden öne çıkanlar <small>okumanız önerilir</small></h2>
-{% for c in d.ortak %}{{ card(c, 'shared', links, r.id, 'ortak-' ~ loop.index) }}{% else %}<p class="quiet">Ortak maillerde öne çıkan tartışma yok.</p>{% endfor %}
-
-<h2 id="takip"><span class="dot" style="background:var(--red)"></span>Aksiyon gerektirenler</h2>
-{% for c in d.aksiyon %}{{ card(c, 'high', links, r.id, 'aksiyon-' ~ loop.index) }}{% else %}<p class="quiet">Size doğrudan bekleyen konu yok.</p>{% endfor %}
-
-{% if d.takip %}<h2><span class="dot" style="background:var(--amber)"></span>Takip etmeniz gerekenler</h2>
-{% for c in d.takip %}{{ card(c, 'mid', links, r.id, 'takip-' ~ loop.index) }}{% endfor %}{% endif %}
-
-{% if d.bilgi %}<h2><span class="dot" style="background:var(--blue)"></span>Bilgi amaçlı</h2>
-<ul class="compact">{% for b in d.bilgi %}<li>{{ b.metin }}{% if b.kim %}<span class="meta">{{ b.kim }}</span>{% endif %}</li>{% endfor %}</ul>{% endif %}
+{% if p.bilgi %}<h2><span class="dot" style="background:var(--blue)"></span>Bilgi amaçlı</h2>
+<ul class="compact">{% for b in p.bilgi %}<li>{{ b.metin }}{% if b.kim %}<span class="meta">{{ b.kim }}</span>{% endif %}</li>{% endfor %}</ul>{% endif %}
 
 {% if d.rutin_zincirler %}<details><summary>Uzayan ortak yazışmalar (rutin, {{ d.rutin_zincirler|length }})</summary><table>
 {% for z in d.rutin_zincirler %}<tr><td>{{ z.metin }}</td><td class="n">{{ z.adet }}</td></tr>{% endfor %}</table></details>{% endif %}

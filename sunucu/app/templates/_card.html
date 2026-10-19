@@ -13,31 +13,35 @@
     {% if c.refs and links[c.refs[0]|string] %}<a class="open" href="{{ links[c.refs[0]|string] }}" target="_blank" rel="noopener noreferrer">Outlook'ta aç ↗</a>{% endif %}
   </article>
 {% endmacro %}
-{% macro satir(c, links, rid, kid, rozet='') %}
+{# Özet panodaki tek satır: konunun tüm bilgisi burada, sayfada başka yerde tekrar edilmez #}
+{% macro satir(c, links, rid) %}
   {% set ref = (c.refs or [])[0] %}
-  {% set href = ('/mail/' ~ rid ~ '/' ~ ref) if (ref is not none and links[ref|string]) else ('#' ~ kid) %}
-  <li><a class="p-row" href="{{ href }}">
+  {% set oku = (ref is not none) and links[ref|string] %}
+  <li class="p-item">
+    {% if oku %}<a class="p-row" href="/mail/{{ rid }}/{{ ref }}">{% else %}<div class="p-row">{% endif %}
     <span class="p-main">
       <b>{{ c.baslik }}</b>
-      <span class="p-meta">{% if rozet %}<span class="p-badge">{{ rozet }}</span>{% endif %}{{ c.kim }}{% if c.kim and c.zaman %} · {% endif %}{{ c.zaman }}</span>
+      <span class="p-meta">{% if c._aksiyon %}<span class="p-badge">Sizden bekleniyor</span>{% endif %}{{ c.kim }}{% if c.kim and c.zaman %} · {% endif %}{{ c.zaman }}</span>
       {% if c.ozet %}<span class="p-ozet">{{ c.ozet }}</span>{% endif %}
-      <span class="p-tags">{% for k in (c.kisiler or [])[:2] %}<span class="kisi">{{ k }}</span>{% endfor %}{% for t in c.etiketler or [] %}{% if 'son tarih' in t|lower or 'rehber' in t|lower %}<span>{{ t }}</span>{% endif %}{% endfor %}</span>
+      {% if c.satir %}<span class="p-adim"><b>{{ c.satir_etiketi or 'Öneri' }}:</b> {{ c.satir }}</span>{% endif %}
+      {% if c.alinti %}<span class="p-alinti">"{{ c.alinti }}"</span>{% endif %}
+      <span class="p-tags">{% for k in c.kisiler or [] %}<span class="kisi">{{ k }}</span>{% endfor %}{% for t in c.etiketler or [] %}<span class="{{ 'son' if 'son tarih' in t|lower }}">{{ t }}</span>{% endfor %}</span>
     </span>
-    <span class="p-go">{{ 'Maili oku' if href.startswith('/mail/') else 'Ayrıntı' }} ›</span>
-  </a></li>
+    {% if oku %}<span class="p-go">Maili oku ›</span></a>{% else %}</div>{% endif %}
+    {% if (c.refs or [])|length > 1 %}<span class="p-ek">{% for x in c.refs[1:4] %}{% if links[x|string] %}<a href="/mail/{{ rid }}/{{ x }}">{{ loop.index + 1 }}. mail</a>{% endif %}{% endfor %}</span>{% endif %}
+  </li>
 {% endmacro %}
 
-{# rows: [{c, kid, rozet}] · bolum: ayrıntı bölümünün kimliği #}
-{% macro pano(pid, baslik, aciklama, ikon, renk, rows, links, rid, bolum, bos) %}
+{% macro pano(pid, baslik, aciklama, ikon, renk, kartlar, links, rid, bos, alt='') %}
   <section class="p-card" id="{{ pid }}" style="--c: var(--{{ renk }}); --cbg: var(--{{ renk }}-bg)">
     <header class="p-head">
       <span class="p-ikon" aria-hidden="true">{{ ikon }}</span>
       <div><h3>{{ baslik }}</h3><p>{{ aciklama }}</p></div>
-      <span class="p-say">{{ rows|length }}</span>
+      <span class="p-say">{{ kartlar|length }}</span>
     </header>
-    {% if rows %}
-      <ul class="p-list">{% for r in rows[:6] %}{{ satir(r.c, links, rid, r.kid, r.rozet) }}{% endfor %}</ul>
-      {% if rows|length > 6 %}<a class="p-more" href="#{{ bolum }}">+{{ rows|length - 6 }} konu daha · tümünü gör ›</a>{% endif %}
+    {% if kartlar %}
+      <ul class="p-list">{% for c in kartlar %}{{ satir(c, links, rid) }}{% endfor %}</ul>
     {% else %}<p class="p-bos">{{ bos }}</p>{% endif %}
+    {% if alt %}<p class="p-alt">{{ alt }}</p>{% endif %}
   </section>
 {% endmacro %}

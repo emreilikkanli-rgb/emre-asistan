@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from . import ajanda as ajanda_mod, auth, db, ews_gonder, jobs
+from .analyze import tekillestir
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("ea.main")
@@ -131,12 +132,17 @@ def ana(request: Request):
                  simdi="%d %s %d, %s" % (simdi.day, AYLAR[simdi.month - 1], simdi.year, GUNLER[simdi.weekday()]))
 
 
+def _pano(r):
+    return tekillestir(r["data"]) if r and r.get("status") == "ok" and isinstance(r.get("data"), dict) else {}
+
+
 @app.get("/mailler", response_class=HTMLResponse)
 def mailler(request: Request):
     sid, redir = _guard(request)
     if redir:
         return redir
-    return _page(request, "rapor.html", sid, r=db.get_report(), son=db.list_reports(1), gun=ajanda_mod.today_summary())
+    r = db.get_report()
+    return _page(request, "rapor.html", sid, r=r, p=_pano(r), son=db.list_reports(1), gun=ajanda_mod.today_summary())
 
 
 @app.get("/rapor/{rid}", response_class=HTMLResponse)
@@ -144,7 +150,8 @@ def rapor(request: Request, rid: int):
     sid, redir = _guard(request)
     if redir:
         return redir
-    return _page(request, "rapor.html", sid, r=db.get_report(rid), son=[])
+    r = db.get_report(rid)
+    return _page(request, "rapor.html", sid, r=r, p=_pano(r), son=[])
 
 
 @app.get("/raporlar", response_class=HTMLResponse)
