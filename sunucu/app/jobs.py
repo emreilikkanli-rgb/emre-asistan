@@ -62,6 +62,7 @@ def run(kind="sabah", hours=None):
         label = "%s → %s" % ((now - timedelta(hours=hours)).strftime("%d.%m %H:%M"), now.strftime("%d.%m %H:%M"))
         data, cands, usage = analyze(result, bodies, cfg, label)
         data["_links"] = {str(i + 1): ews.owa_link(m["id"]) for i, m in enumerate(cands)}
+        data["_ids"] = {str(i + 1): m["id"] for i, m in enumerate(cands)}
         data["_gruplar"] = result["others"].most_common(12)
         stats = {"total": total, "scanned": len(msgs), "others_total": result["others_total"],
                  "candidates": len(cands), "period": label}

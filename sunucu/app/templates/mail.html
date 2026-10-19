@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block body %}
+{% set aktif = 'rapor' %}{% include "_nav.html" %}
+<p class="hub-sub" style="margin:0 0 4px">Emre'nin Mailleri</p>
+<p><a href="/rapor/{{ rid }}">← Rapora dön</a></p>
+{% if hata %}<div class="note err">{{ hata }}</div>
+{% else %}
+<article class="card">
+  <h1 style="font-size:20px;margin:0 0 10px">{{ m.subject or '(konu yok)' }}</h1>
+  <table class="mailhead">
+    <tr><td>Kimden</td><td><b>{{ m.from_name }}</b> &lt;{{ m.from_addr }}&gt;</td></tr>
+    <tr><td>Kime</td><td>{{ m.to }}</td></tr>
+    {% if m.cc %}<tr><td>CC</td><td>{{ m.cc }}</td></tr>{% endif %}
+    <tr><td>Tarih</td><td>{{ m.received | yerel }}</td></tr>
+    {% if m.attachments %}<tr><td>Ekler</td><td>{{ m.attachments | join(' · ') }}</td></tr>{% endif %}
+  </table>
+  <pre class="mailbody">{{ m.body }}</pre>
+  <div class="row"><a class="open" href="{{ m.owa }}" target="_blank" rel="noopener noreferrer">Outlook'ta aç ↗</a></div>
+  <p class="muted" style="font-size:12px">Mail salt okunur gösterildi; okundu olarak işaretlenmedi. Cevap vermek ve ekleri açmak için Outlook'u kullanın.</p>
+</article>
+{% endif %}
+{% endblock %}

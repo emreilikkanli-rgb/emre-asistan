@@ -116,6 +116,12 @@
   .hub-sub { margin: 4px 0 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
   .hub-actions { margin-top: 4px; }
   a.btn { text-decoration: none; display: inline-block; }
+  .mailhead { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 14px; }
+  .mailhead td { padding: 4px 0; vertical-align: top; border-top: 0; overflow-wrap: anywhere; }
+  .mailhead td:first-child { width: 70px; color: var(--muted); }
+  .mailbody { white-space: pre-wrap; overflow-wrap: anywhere; font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); border-radius: 10px; padding: 14px; margin: 0 0 12px; max-height: none; }
+  .open.read { background: var(--blue); color: #fff; }
   @media (max-width: 420px) { .hub-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
 </head>

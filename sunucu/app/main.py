@@ -319,3 +319,37 @@ async def ice_aktar(request: Request):
                 db.doc_set(col, row["id"], row["data"])
                 n += 1
     return RedirectResponse("/ayarlar?aktar=%d" % n, status_code=303)
+
+
+# ---------- Maili asistanın içinde okuma ----------
+from urllib.parse import parse_qs, urlparse
+
+from .ews import Ews, EwsError, get_message
+
+
+@app.get("/mail/{rid}/{ref}", response_class=HTMLResponse)
+def mail_oku(request: Request, rid: int, ref: str):
+    sid, redir = _guard(request)
+    if redir:
+        return redir
+    r = db.get_report(rid)
+    item_id = None
+    if r:
+        item_id = (r["data"].get("_ids") or {}).get(ref)
+        if not item_id:  # eski raporlar: kimliği Outlook bağlantısından çıkar
+            link = (r["data"].get("_links") or {}).get(ref, "")
+            item_id = (parse_qs(urlparse(link).query).get("ItemID") or [None])[0]
+    m, hata = None, None
+    if not item_id:
+        hata = "Bu mail bulunamadı."
+    else:
+        try:
+            ews = Ews(os.environ.get("EWS_HOST", ""), os.environ.get("EWS_USER", ""), os.environ.get("EWS_PASSWORD", ""))
+            m = get_message(ews, item_id)
+            if not m:
+                hata = "Mail artık gelen kutusunda değil (taşınmış ya da silinmiş olabilir)."
+            else:
+                m["owa"] = ews.owa_link(item_id)
+        except EwsError as e:
+            hata = str(e)
+    return _page(request, "mail.html", sid, m=m, hata=hata, rid=rid)

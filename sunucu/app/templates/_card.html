@@ -1,4 +1,4 @@
-{% macro card(c, cls, links) %}
+{% macro card(c, cls, links, rid) %}
   <article class="card {{ cls }}">
     <div class="top"><h3>{{ c.baslik }}</h3><span class="meta">{{ c.zaman }}</span></div>
     {% if c.kim %}<div class="meta">{{ c.kim }}</div>{% endif %}
@@ -9,6 +9,7 @@
       {% for k in c.kisiler %}<span class="tag person">{{ k }}</span>{% endfor %}
       {% for e in c.etiketler %}<span class="tag {{ 'pay' if 'son tarih' in e|lower else 'comp' if 'şikâyet' in e|lower or 'şikayet' in e|lower else '' }}">{{ e }}</span>{% endfor %}
     </div>{% endif %}
-    {% for ref in c.refs[:3] %}{% if links[ref|string] %}<a class="open" href="{{ links[ref|string] }}" target="_blank" rel="noopener noreferrer">{{ 'Maili aç ↗' if loop.first else (loop.index ~ '. mail ↗') }}</a>{% endif %}{% endfor %}
+    {% for ref in c.refs[:3] %}{% if links[ref|string] %}<a class="open read" href="/mail/{{ rid }}/{{ ref }}">{{ 'Maili oku' if loop.first else (loop.index ~ '. maili oku') }}</a>{% endif %}{% endfor %}
+    {% if c.refs and links[c.refs[0]|string] %}<a class="open" href="{{ links[c.refs[0]|string] }}" target="_blank" rel="noopener noreferrer">Outlook'ta aç ↗</a>{% endif %}
   </article>
 {% endmacro %}

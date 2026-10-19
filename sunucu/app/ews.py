@@ -150,3 +150,32 @@ def _parse_message(msg):
         "has_attachments": t("HasAttachments") == "true",
         "preview": " ".join(t("Preview").split()),
     }
+
+
+_GET_ONE = """<m:GetItem>
+   <m:ItemShape><t:BaseShape>IdOnly</t:BaseShape><t:BodyType>Text</t:BodyType>
+    <t:AdditionalProperties>
+     <t:FieldURI FieldURI="item:Subject"/>
+     <t:FieldURI FieldURI="message:From"/>
+     <t:FieldURI FieldURI="item:DisplayTo"/>
+     <t:FieldURI FieldURI="item:DisplayCc"/>
+     <t:FieldURI FieldURI="item:DateTimeReceived"/>
+     <t:FieldURI FieldURI="item:Body"/>
+     <t:FieldURI FieldURI="item:Attachments"/>
+    </t:AdditionalProperties>
+   </m:ItemShape>
+   <m:ItemIds><t:ItemId Id="{id}"/></m:ItemIds>
+  </m:GetItem>"""
+
+
+def get_message(ews, item_id):
+    """Tek maili salt okunur getirir (GetItem okundu işareti koymaz)."""
+    root = ews._call(_GET_ONE.format(id=escape(item_id, {'"': "&quot;"})))
+    msg = next(root.iter("{%s}Message" % NS["t"]), None)
+    if msg is None:
+        return None
+    m = _parse_message(msg)
+    m["body"] = msg.findtext("t:Body", default="", namespaces=NS)
+    m["attachments"] = [a.findtext("t:Name", default="", namespaces=NS)
+                        for a in msg.iter() if a.tag in ("{%s}FileAttachment" % NS["t"], "{%s}ItemAttachment" % NS["t"])]
+    return m

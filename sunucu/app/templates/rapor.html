@@ -38,23 +38,23 @@
 {% if d.bildirim %}<div class="note">{{ d.bildirim }}</div>{% endif %}
 
 <h2><span class="dot" style="background:var(--red)"></span>Şikâyetler <small>tüm gelen kutusu, rehber şikâyetleri dahil</small></h2>
-{% for c in d.sikayetler %}{{ card(c, 'complaint', links) }}{% else %}<p class="quiet">Bu dönemde şikâyet yok.</p>{% endfor %}
+{% for c in d.sikayetler %}{{ card(c, 'complaint', links, r.id) }}{% else %}<p class="quiet">Bu dönemde şikâyet yok.</p>{% endfor %}
 
 <h2><span class="dot" style="background:var(--orange)"></span>Ödeme talepleri ve giriş riski</h2>
-{% for c in d.odeme %}{{ card(c, 'pay', links) }}{% else %}<p class="quiet">Ödeme / giriş riski bildiren mail yok.</p>{% endfor %}
+{% for c in d.odeme %}{{ card(c, 'pay', links, r.id) }}{% else %}<p class="quiet">Ödeme / giriş riski bildiren mail yok.</p>{% endfor %}
 
 <h2><span class="dot" style="background:var(--violet)"></span>Öncelikli kişiler</h2>
-{% for c in d.oncelikli %}{{ card(c, 'vip', links) }}{% else %}<p class="quiet">Öncelikli kişilerden önemli gelişme yok.</p>{% endfor %}
+{% for c in d.oncelikli %}{{ card(c, 'vip', links, r.id) }}{% else %}<p class="quiet">Öncelikli kişilerden önemli gelişme yok.</p>{% endfor %}
 {% if d.maili_olmayan_oncelikliler %}<p class="quiet">{{ d.maili_olmayan_oncelikliler | join(' · ') }}: bu dönemde mail yok.</p>{% endif %}
 
 <h2><span class="dot" style="background:var(--teal)"></span>Ortak maillerden öne çıkanlar <small>okumanız önerilir</small></h2>
-{% for c in d.ortak %}{{ card(c, 'shared', links) }}{% else %}<p class="quiet">Ortak maillerde öne çıkan tartışma yok.</p>{% endfor %}
+{% for c in d.ortak %}{{ card(c, 'shared', links, r.id) }}{% else %}<p class="quiet">Ortak maillerde öne çıkan tartışma yok.</p>{% endfor %}
 
 <h2><span class="dot" style="background:var(--red)"></span>Aksiyon gerektirenler</h2>
-{% for c in d.aksiyon %}{{ card(c, 'high', links) }}{% else %}<p class="quiet">Size doğrudan bekleyen konu yok.</p>{% endfor %}
+{% for c in d.aksiyon %}{{ card(c, 'high', links, r.id) }}{% else %}<p class="quiet">Size doğrudan bekleyen konu yok.</p>{% endfor %}
 
 {% if d.takip %}<h2><span class="dot" style="background:var(--amber)"></span>Takip etmeniz gerekenler</h2>
-{% for c in d.takip %}{{ card(c, 'mid', links) }}{% endfor %}{% endif %}
+{% for c in d.takip %}{{ card(c, 'mid', links, r.id) }}{% endfor %}{% endif %}
 
 {% if d.bilgi %}<h2><span class="dot" style="background:var(--blue)"></span>Bilgi amaçlı</h2>
 <ul class="compact">{% for b in d.bilgi %}<li>{{ b.metin }}{% if b.kim %}<span class="meta">{{ b.kim }}</span>{% endif %}</li>{% endfor %}</ul>{% endif %}
