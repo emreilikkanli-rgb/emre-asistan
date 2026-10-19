@@ -15,7 +15,7 @@ import sys
 from argon2 import PasswordHasher
 
 SERVICE = "ea-sunucu"
-MAIL_USER = os.environ.get("EWS_USER", "emre.ilikkanli@cyprusroyal.com")
+MAIL_USER = os.environ.get("EWS_USER") or input("Mail adresiniz (Anahtar Zinciri kaydındaki): ").strip()
 RAILWAY = shutil.which("railway") or os.path.expanduser("~/.local/bin/railway")
 
 
@@ -57,6 +57,4 @@ push("EWS_PASSWORD", mail)
 push("ANTHROPIC_API_KEY", key, deploy=True)
 del p1, key, mail
 
-print("
-Tamam. Sunucu bir-iki dakika içinde yeni ayarlarla açılır.
-")
+print("\nTamam. Sunucu bir-iki dakika içinde yeni ayarlarla açılır.\n")
