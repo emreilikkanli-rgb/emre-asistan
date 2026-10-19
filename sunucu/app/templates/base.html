@@ -99,6 +99,24 @@
   .muted { color: var(--muted); }
   .open + .open { margin-left: 6px; }
   :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .hub { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 20px; }
+  .hub-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+  .hub-head { display: flex; align-items: center; gap: 8px; }
+  .hub-head h2 { margin: 0; font-size: 19px; }
+  .hub-head .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .hub-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .hub-stats div { background: var(--bg); border-radius: 10px; padding: 8px 10px; }
+  .hub-stats b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .hub-stats span { font-size: 12px; color: var(--muted); }
+  .hub-stats .warn b { color: var(--red); }
+  .hub-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+  .hub-list li { display: flex; gap: 10px; overflow-wrap: anywhere; }
+  .hub-list .t { flex: 0 0 52px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .hub-note { margin: 0; font-size: 14px; padding: 8px 10px; border-radius: 8px; background: var(--gray-bg); }
+  .hub-sub { margin: 4px 0 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .hub-actions { margin-top: 4px; }
+  a.btn { text-decoration: none; display: inline-block; }
+  @media (max-width: 420px) { .hub-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
 </head>
 <body>

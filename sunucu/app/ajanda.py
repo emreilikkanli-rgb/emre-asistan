@@ -207,3 +207,28 @@ def today_summary():
         g["_gun"] = (datetime.strptime(today, "%Y-%m-%d") - datetime.strptime(g["bitisTarihi"], "%Y-%m-%d")).days
     return {"bugun": bugun, "geciken": geciken, "g_bugun": g_bugun, "g_gec": g_gec,
             "bos": not (bugun or geciken or g_bugun or g_gec)}
+
+
+def upcoming(n=3):
+    """Ana sayfa için: sıradaki hatırlatmalar (yerel saat)."""
+    now = _now_iso()
+    rows = []
+    for r in db.doc_list("items"):
+        d = r["data"]
+        t = _effective(d)
+        if not d.get("done") and t and t > now:
+            rows.append((t, d.get("title", "")))
+    for r in db.doc_list("gorevler"):
+        g = r["data"]
+        t = _effective(g)
+        if g.get("durum") == "suruyor" and t and t > now:
+            rows.append((t, "%s · %s" % (g.get("kisi", ""), g.get("baslik", ""))))
+    out = []
+    for t, title in sorted(rows)[:n]:
+        try:
+            loc = datetime.strptime(t[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc).astimezone(TZ)
+            z = loc.strftime("%d.%m %H:%M") if loc.date() != datetime.now(TZ).date() else loc.strftime("%H:%M")
+        except ValueError:
+            z = ""
+        out.append({"zaman": z, "baslik": title})
+    return out

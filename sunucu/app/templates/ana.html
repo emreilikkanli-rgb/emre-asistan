@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block body %}
+{% set aktif = 'ana' %}{% include "_nav.html" %}
+<header>
+  <h1>Emre'nin Asistanı</h1>
+  <p>{{ simdi }}</p>
+</header>
+
+<div class="hub">
+  <section class="hub-card">
+    <div class="hub-head"><span class="dot" style="background:var(--blue)"></span><h2>Emre'nin Ajandası</h2></div>
+    <div class="hub-stats">
+      <div><b>{{ gun.bugun|length }}</b><span>bugün</span></div>
+      <div class="{{ 'warn' if gun.geciken }}"><b>{{ gun.geciken|length }}</b><span>gecikmiş iş</span></div>
+      <div><b>{{ gun.g_bugun|length }}</b><span>bugün biten görev</span></div>
+      <div class="{{ 'warn' if gun.g_gec }}"><b>{{ gun.g_gec|length }}</b><span>geciken görev</span></div>
+    </div>
+    {% if gun.bugun %}<ul class="hub-list">{% for i in gun.bugun[:5] %}<li><span class="t">{{ i.time or '—' }}</span>{{ i.title }}</li>{% endfor %}</ul>
+    {% else %}<p class="muted">Bugün için ajanda kaydı yok.</p>{% endif %}
+    {% if gun.g_gec %}<p class="hub-note">Geciken görevler: {% for g in gun.g_gec[:4] %}<b>{{ g.kisi }}</b> · {{ g.baslik }} ({{ g._gun }} gün){{ ', ' if not loop.last }}{% endfor %}</p>{% endif %}
+    {% if yaklasan %}<p class="hub-sub">Yaklaşan hatırlatmalar</p>
+    <ul class="hub-list">{% for y in yaklasan %}<li><span class="t">{{ y.zaman }}</span>{{ y.baslik }}</li>{% endfor %}</ul>{% endif %}
+    <div class="row hub-actions"><a class="btn primary" href="/ajanda">Ajandayı aç</a><a class="btn" href="/ajanda#gorevler">Görevler</a></div>
+  </section>
+
+  <section class="hub-card">
+    <div class="hub-head"><span class="dot" style="background:var(--teal)"></span><h2>Emre'nin Mailleri</h2></div>
+    {% if r %}{% set d = r.data %}
+    <p class="muted" style="margin-top:0">{{ 'Sabah raporu' if r.kind == 'sabah' else 'Ara kontrol' }} · {{ r.created_at | yerel }} · {{ r.stats.total }} mail tarandı</p>
+    <div class="hub-stats">
+      <div class="{{ 'warn' if d.sikayetler }}"><b>{{ d.sikayetler|length }}</b><span>şikâyet</span></div>
+      <div class="{{ 'warn' if d.odeme }}"><b>{{ d.odeme|length }}</b><span>ödeme / giriş riski</span></div>
+      <div><b>{{ d.oncelikli|length }}</b><span>öncelikli kişi</span></div>
+      <div><b>{{ d.aksiyon|length }}</b><span>aksiyon bekliyor</span></div>
+    </div>
+    {% if d.bildirim %}<p class="hub-note">{{ d.bildirim }}</p>{% endif %}
+    <ul class="hub-list">
+      {% for c in (d.sikayetler + d.odeme + d.aksiyon)[:4] %}<li><span class="t">{{ c.zaman[:5] }}</span>{{ c.baslik }}</li>{% endfor %}
+    </ul>
+    {% else %}<p class="muted">Henüz mail raporu yok. İlk rapor sabah 08:30'da hazırlanır.</p>{% endif %}
+    <div class="row hub-actions"><a class="btn primary" href="/mailler">Son raporu aç</a><a class="btn" href="/raporlar">Tüm raporlar</a></div>
+  </section>
+</div>
+<footer>Bu ay API harcaması: ${{ '%.2f' % aylik }} / ${{ ayarlar.aylik_limit_usd }} limit.</footer>
+{% endblock %}

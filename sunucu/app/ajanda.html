@@ -453,6 +453,7 @@
     items: new Map(), plans: new Map(), gorevler: new Map(), db: null, ready: false, openId: null, openGorev: null, armedDelete: false,
   };
   try { const v = localStorage.getItem('ajanda.view'); if (['gun', 'hafta', 'ay', 'gorevler', 'ozel'].includes(v)) state.view = v; } catch (e) {}
+  { const h = location.hash.slice(1); if (['gun', 'hafta', 'ay', 'gorevler', 'ozel'].includes(h)) state.view = h; }
 
   const $ = s => document.querySelector(s);
   const statusEl = $('#status');

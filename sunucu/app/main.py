@@ -123,6 +123,16 @@ def ana(request: Request):
     sid, redir = _guard(request)
     if redir:
         return redir
+    simdi = datetime.now(TZ)
+    return _page(request, "ana.html", sid, r=db.get_report(), gun=ajanda_mod.today_summary(), yaklasan=ajanda_mod.upcoming(3),
+                 simdi="%d %s %d, %s" % (simdi.day, AYLAR[simdi.month - 1], simdi.year, GUNLER[simdi.weekday()]))
+
+
+@app.get("/mailler", response_class=HTMLResponse)
+def mailler(request: Request):
+    sid, redir = _guard(request)
+    if redir:
+        return redir
     return _page(request, "rapor.html", sid, r=db.get_report(), son=db.list_reports(1), gun=ajanda_mod.today_summary())
 
 
@@ -201,12 +211,20 @@ def ajanda(request: Request):
             '<meta name="robots" content="noindex, nofollow"><meta name="csrf" content="%s">'
             '<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}'
             'body{margin:0;font:14px system-ui,-apple-system,sans-serif}[hidden]{display:none!important}'
-            '.ea-geri{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:30;'
-            'font:600 13px system-ui,sans-serif;padding:8px 12px;border-radius:999px;background:#1f5fa8;color:#fff;text-decoration:none;'
-            'box-shadow:0 2px 8px rgb(0 0 0/.2)}</style>'
+            '.ea-menu{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;justify-content:space-between;max-width:1240px;margin:0 auto;'
+            'padding:14px 16px 0;font:500 14px system-ui,-apple-system,sans-serif}'
+            '.ea-menu a{color:#5b6678;text-decoration:none;padding:6px 10px;border-radius:8px}'
+            '.ea-menu a:hover,.ea-menu a.on{background:#e9edf3;color:#17202e}'
+            '.ea-marka{display:flex;align-items:center;gap:10px;font-weight:700;color:#17202e!important;padding-left:0!important;background:none!important}'
+            '.ea-marka i{font-style:normal;width:30px;height:30px;border-radius:8px;background:#1f5fa8;color:#fff;display:grid;place-items:center;font-size:13px}'
+            '.ea-menu span{display:flex;flex-wrap:wrap;gap:4px}'
+            '@media (prefers-color-scheme:dark){.ea-menu a{color:#9aa6b8}.ea-menu a:hover,.ea-menu a.on{background:#212b38;color:#e7ebf2}.ea-marka{color:#e7ebf2!important}}'
+            '</style>'
             '<script src="/ajanda/kopru.js"></script></head><body>') % auth.csrf_token(sid)
-    tail = '<a class="ea-geri" href="/">Mail raporları</a></body></html>'
-    return HTMLResponse(head + _ajanda_html() + tail)
+    menu = ('<nav class="ea-menu"><a class="ea-marka" href="/"><i>EA</i>Emre\'nin Asistanı</a><span>'
+            '<a class="on" href="/ajanda">Emre\'nin Ajandası</a><a href="/mailler">Emre\'nin Mailleri</a>'
+            '<a href="/ayarlar">Ayarlar</a></span></nav>')
+    return HTMLResponse(head + menu + _ajanda_html() + '</body></html>')
 
 
 @app.get("/ajanda/kopru.js")

@@ -11,8 +11,9 @@
 {% else %}
 {% set d = r.data %}{% set links = d._links or {} %}{% set s = r.stats %}
 <header>
+  <p class="hub-sub" style="margin:0 0 4px">Emre'nin Mailleri</p>
   <h1>{{ 'Günaydın Emre Bey' if r.kind == 'sabah' else 'Gün içi kontrol' }}</h1>
-  <p>{{ r.created_at | uzun_tarih }} · {{ s.period }}</p>
+  <p>{{ r.created_at | uzun_tarih }} · {{ s.period }} · <a href="/raporlar">Tüm raporlar</a></p>
 </header>
 
 <section class="stats">
