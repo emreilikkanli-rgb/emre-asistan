@@ -309,6 +309,7 @@
               <option value="">Hatırlatma yok</option>
               <option value="0">Saatinde hatırlat</option>
               <option value="15">15 dk önce</option>
+              <option value="30">30 dk önce</option>
               <option value="60">1 saat önce</option>
               <option value="1440">1 gün önce</option>
               <option value="morning">O gün 09:00</option>
@@ -493,6 +494,7 @@
     const now = new Date();
     let t;
     if (kind === '15') t = new Date(now.getTime() + 15 * 60000);
+    else if (kind === '30') t = new Date(now.getTime() + 30 * 60000);
     else if (kind === '60') t = new Date(now.getTime() + 60 * 60000);
     else if (kind === '180') t = new Date(now.getTime() + 180 * 60000);
     else if (kind === 'yarin') { t = addDays(now, 1); t.setHours(9, 0, 0, 0); }
@@ -1014,6 +1016,7 @@
       <div class="acts">
         ${i.type !== 'not' ? `<button class="btn ok" type="button" data-act="done" data-id="${esc(i.id)}">Tamamlandı</button>` : ''}
         <button class="btn" type="button" data-act="snooze" data-when="15" data-id="${esc(i.id)}">15 dk sonra</button>
+        <button class="btn" type="button" data-act="snooze" data-when="30" data-id="${esc(i.id)}">30 dk sonra</button>
         <button class="btn" type="button" data-act="snooze" data-when="60" data-id="${esc(i.id)}">1 saat sonra</button>
         <button class="btn" type="button" data-act="snooze" data-when="yarin" data-id="${esc(i.id)}">Yarın 09:00</button>
         <button class="btn" type="button" data-act="open" data-id="${esc(i.id)}">Not ekle</button>
@@ -1068,6 +1071,7 @@
         ${it.type !== 'not' ? `<button class="btn ok" type="button" data-act="toggleDrawer">${it.done ? 'Tamamlanmadı olarak işaretle' : 'Tamamlandı'}</button>` : ''}</div>
       ${!it.done && r ? `<div class="field"><span class="label">Daha sonra hatırlat</span><div class="row">
         <button class="btn" type="button" data-act="snooze" data-when="15" data-id="${esc(it.id)}">15 dk</button>
+        <button class="btn" type="button" data-act="snooze" data-when="30" data-id="${esc(it.id)}">30 dk</button>
         <button class="btn" type="button" data-act="snooze" data-when="60" data-id="${esc(it.id)}">1 saat</button>
         <button class="btn" type="button" data-act="snooze" data-when="180" data-id="${esc(it.id)}">3 saat</button>
         <button class="btn" type="button" data-act="snooze" data-when="yarin" data-id="${esc(it.id)}">Yarın 09:00</button>
