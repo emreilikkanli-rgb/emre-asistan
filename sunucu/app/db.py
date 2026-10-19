@@ -19,6 +19,7 @@ DEFAULT_SETTINGS = {
     "tartisma_kelimeleri": "kabul edilemez; kabul etmiyoruz; kabul etmemiz mümkün değil; itiraz; tekrar hatırlat; ikinci kez; defalarca; hala dönüş; hâlâ dönüş; halen dönüş; dönüş alamadık; dönüş sağlanmadı; yanıt alamadık; cevap alamadık; ısrarla; mağduriyet; mağdur; sorumluluk; no show; noshow; tazminat; hata yapılmış; yanlış bilgi; yanlış fiyat; yanlış rezervasyon; bilginiz dışında; sitem; üzülerek; anlaşılamadı",
     "rehber_kelimeleri": "rehber; rehberi; rehberimiz; guide; tur lideri",
     "rehber_olumsuz": "şikayet; şikâyet; memnun; ilgisiz; ilgilenmedi; kaba; saygısız; geç kaldı; gelmedi; ulaşılamadı; davranış; tavır; sorun; problem; hata; mağdur; complaint",
+    "ajanda_gonderenler": "",
     "aylik_limit_usd": "5",
     "takvim": "08:30=sabah;13:00=ara;17:00=ara",
 }
@@ -40,6 +41,9 @@ def init():
             cost REAL DEFAULT 0, tokens_in INTEGER DEFAULT 0, tokens_out INTEGER DEFAULT 0);
         CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, created_at REAL NOT NULL, last_seen REAL NOT NULL, ip TEXT);
         CREATE TABLE IF NOT EXISTS login_fails (ip TEXT NOT NULL, at REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS docs (collection TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL,
+            updated_at TEXT NOT NULL, PRIMARY KEY (collection, id));
+        CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, body TEXT NOT NULL, created_at TEXT NOT NULL);
         """)
 
 
@@ -140,3 +144,47 @@ def fail_count(since, ip=None):
 def fail_clear(ip):
     with _lock, _conn() as c:
         c.execute("DELETE FROM login_fails WHERE ip=?", (ip,))
+
+
+# Ajanda belgeleri (items, gorevler, plans): claude.ai ajandasıyla aynı yapı
+DOC_COLLECTIONS = ("items", "gorevler", "plans", "ayarlar")
+
+
+def doc_list(collection):
+    with _conn() as c:
+        return [{"id": r["id"], "data": json.loads(r["body"])}
+                for r in c.execute("SELECT id, body FROM docs WHERE collection=? ORDER BY id", (collection,))]
+
+
+def doc_get(collection, doc_id):
+    with _conn() as c:
+        r = c.execute("SELECT body FROM docs WHERE collection=? AND id=?", (collection, doc_id)).fetchone()
+    return json.loads(r["body"]) if r else None
+
+
+def doc_set(collection, doc_id, body):
+    with _lock, _conn() as c:
+        c.execute("INSERT INTO docs(collection, id, body, updated_at) VALUES(?,?,?,?) "
+                  "ON CONFLICT(collection, id) DO UPDATE SET body=excluded.body, updated_at=excluded.updated_at",
+                  (collection, doc_id, json.dumps(body, ensure_ascii=False), datetime.now(timezone.utc).isoformat()))
+
+
+def doc_delete(collection, doc_id):
+    with _lock, _conn() as c:
+        c.execute("DELETE FROM docs WHERE collection=? AND id=?", (collection, doc_id))
+
+
+def push_list():
+    with _conn() as c:
+        return [json.loads(r["body"]) for r in c.execute("SELECT body FROM push_subs")]
+
+
+def push_add(sub):
+    with _lock, _conn() as c:
+        c.execute("INSERT INTO push_subs(endpoint, body, created_at) VALUES(?,?,?) ON CONFLICT(endpoint) DO UPDATE SET body=excluded.body",
+                  (sub["endpoint"], json.dumps(sub), datetime.now(timezone.utc).isoformat()))
+
+
+def push_remove(endpoint):
+    with _lock, _conn() as c:
+        c.execute("DELETE FROM push_subs WHERE endpoint=?", (endpoint,))

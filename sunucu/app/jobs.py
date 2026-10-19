@@ -12,6 +12,7 @@ from . import db
 from .analyze import analyze
 from .classify import classify
 from .ews import Ews, EwsError
+from . import ajanda, bildirim
 
 log = logging.getLogger("ea.jobs")
 TZ = ZoneInfo("Europe/Istanbul")
@@ -91,5 +92,25 @@ def start():
             continue
         scheduler.add_job(run, CronTrigger(hour=hh, minute=mm, timezone=TZ), args=[kind if kind in ("sabah", "ara") else "ara"],
                           id="kontrol-%s" % t, replace_existing=True, misfire_grace_time=3600, coalesce=True)
+    scheduler.add_job(ajanda_tick, CronTrigger(minute="*/30", hour="7-23", timezone=TZ), id="ajanda-mail",
+                      replace_existing=True, misfire_grace_time=900, coalesce=True)
+    scheduler.add_job(hatirlatma_tick, CronTrigger(minute="*/5", timezone=TZ), id="hatirlatma",
+                      replace_existing=True, misfire_grace_time=300, coalesce=True)
     if not scheduler.running:
         scheduler.start()
+
+
+def ajanda_tick():
+    added = ajanda.mail_intake()
+    if added:
+        names = [("%s: %s" % (b["kisi"], b["baslik"])) if "kisi" in b else b.get("title", "") for b in added]
+        bildirim.gonder("✅ Ajandaya eklendi: " + " · ".join(names)[:180])
+
+
+def hatirlatma_tick():
+    due = ajanda.due_reminders()
+    if not due:
+        return
+    text = " · ".join(t for *_, t in due)
+    if bildirim.gonder(text[:190] + (" — ajandadan ertele/tamamla" if len(text) < 150 else "")):
+        ajanda.mark_notified(due)

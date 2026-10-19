@@ -3,6 +3,7 @@
 {% set aktif = 'ayarlar' %}{% include "_nav.html" %}
 <header><h1>Ayarlar</h1><p>Bu değerler sadece sunucudaki veritabanında saklanır; GitHub'a gitmez.</p></header>
 {% if kaydedildi %}<div class="note ok">Kaydedildi.</div>{% endif %}
+{% set aktar = request.query_params.get('aktar') %}{% if aktar == 'hata' %}<div class="note err">Dosya okunamadı. Claude'un hazırladığı JSON yedeğini seçin.</div>{% elif aktar %}<div class="note ok">{{ aktar }} ajanda kaydı içe aktarıldı.</div>{% endif %}
 <form method="post" action="/ayarlar">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <div class="field"><label for="name">Adınız soyadınız (Kime/CC'de aranır)</label><input type="text" id="name" name="name" value="{{ ayarlar.name }}" maxlength="80"></div>
@@ -14,10 +15,19 @@
   <div class="field"><label for="tartisma_kelimeleri">Ortak mail tartışma işaretleri</label><textarea id="tartisma_kelimeleri" name="tartisma_kelimeleri">{{ ayarlar.tartisma_kelimeleri }}</textarea></div>
   <div class="field"><label for="rehber_kelimeleri">Rehber kelimeleri</label><input type="text" id="rehber_kelimeleri" name="rehber_kelimeleri" value="{{ ayarlar.rehber_kelimeleri }}"></div>
   <div class="field"><label for="rehber_olumsuz">Rehberle birlikte geçince şikâyet sayılan kelimeler</label><textarea id="rehber_olumsuz" name="rehber_olumsuz">{{ ayarlar.rehber_olumsuz }}</textarea></div>
+  <div class="field"><label for="ajanda_gonderenler">Ajanda maili gönderebilecek ek adresler</label><input type="text" id="ajanda_gonderenler" name="ajanda_gonderenler" value="{{ ayarlar.ajanda_gonderenler }}">
+    <small>Kendi şirket adresiniz zaten izinli. Konusu "EA:" ile başlayan mailler 30 dakikada bir ajandaya eklenir.</small></div>
   <div class="field"><label for="takvim">Kontrol saatleri</label><input type="text" id="takvim" name="takvim" value="{{ ayarlar.takvim }}">
     <small>Biçim: <code>08:30=sabah;13:00=ara;17:00=ara</code> (Türkiye saati). "sabah" son 24 saati, "ara" bir önceki rapordan bu yanasını kontrol eder.</small></div>
   <div class="field"><label for="aylik_limit_usd">Aylık API harcama limiti ($)</label><input type="number" id="aylik_limit_usd" name="aylik_limit_usd" min="0" step="0.5" value="{{ ayarlar.aylik_limit_usd }}">
     <small>Limit dolunca kontroller o ay durur. Bu ay: ${{ '%.2f' % aylik }}.</small></div>
   <button class="btn primary" type="submit">Kaydet</button>
 </form>
+<h2 style="margin-top:36px">Ajanda yedeğini içe aktar</h2>
+<form method="post" action="/ayarlar/ice-aktar" enctype="multipart/form-data" class="row">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="file" name="dosya" accept="application/json,.json" required>
+  <button class="btn" type="submit">İçe aktar</button>
+</form>
+<p class="muted" style="font-size:13px">Aynı kimlikli kayıtların üzerine yazılır; diğer kayıtlara dokunulmaz.</p>
 {% endblock %}

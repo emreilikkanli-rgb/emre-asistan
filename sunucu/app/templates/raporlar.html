@@ -9,7 +9,7 @@
 </form>
 <ul class="compact">
 {% for x in liste %}
-  <li>{% if x.status == 'ok' %}<a href="/rapor/{{ x.id }}">{{ 'Sabah raporu' if x.kind == 'sabah' else 'Ara kontrol' }} · {{ x.created_at | yerel }}</a>{% else %}<b>{{ x.created_at | yerel }}</b> · {{ 'Atlandı' if x.status == 'atlandi' else 'Hata' }}: {{ x.error }}{% endif %}
+  <li>{% if x.status == 'ok' %}<a href="/rapor/{{ x.id }}">{{ 'Sabah raporu' if x.kind == 'sabah' else 'Ara kontrol' }} · {{ x.created_at | yerel }}</a>{% else %}<b>{{ x.created_at | yerel }}</b> · {{ 'Atlandı' if x.status == 'atlandi' else 'Ajanda maili' if x.status == 'ajanda' else 'Hata' }}: {{ x.error }}{% endif %}
     <span class="meta">${{ '%.3f' % (x.cost or 0) }}</span></li>
 {% else %}<li class="muted">Henüz rapor yok.</li>{% endfor %}
 </ul>

@@ -1340,13 +1340,13 @@
     resetIdle();
   }
   function lockNow(reason) {
-    if (!unlocked) return;
+    if (!unlocked || window.EA_NO_PIN) return;
     stopData();
     showLock('unlock', reason || '');
   }
   function resetIdle() {
     clearTimeout(idleTimer);
-    if (unlocked) idleTimer = setTimeout(() => lockNow('10 dakika işlem yapılmadığı için kilitlendi.'), IDLE_MS);
+    if (unlocked && !window.EA_NO_PIN) idleTimer = setTimeout(() => lockNow('10 dakika işlem yapılmadığı için kilitlendi.'), IDLE_MS);
   }
   ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev => document.addEventListener(ev, () => { if (unlocked) resetIdle(); }, { passive: true }));
   document.addEventListener('visibilitychange', () => {
@@ -1355,6 +1355,8 @@
   });
 
   async function setupLock(db) {
+    // Sunucu sürümü: giriş şifresi siteyi zaten koruyor, ajandada ayrı PIN yok.
+    if (window.EA_NO_PIN) { hideLock(); startData(db); return; }
     if (!(window.crypto && crypto.subtle)) {
       showLock('unlock', 'Bu tarayıcı güvenli PIN kilidini desteklemiyor; ajanda açılmadı. Safari ya da Chrome\'un güncel sürümünü kullanın.');
       document.getElementById('lockForm').querySelectorAll('input, button').forEach(el => { el.hidden = true; });

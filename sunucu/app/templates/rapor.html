@@ -24,6 +24,16 @@
   <div class="stat"><b>{{ d.aksiyon|length }}</b><span>aksiyon bekliyor</span></div>
 </section>
 
+{% if gun and not gun.bos %}
+<article class="card mid">
+  <div class="top"><h3>Bugünün ajandası</h3><a class="open" href="/ajanda">Ajandayı aç ↗</a></div>
+  {% if gun.bugun %}<ul class="hist">{% for i in gun.bugun %}<li class="{{ 'done' if i.done }}">{{ i.time or '—' }} · {% if i.priority == 'yuksek' %}<b>{{ i.title }}</b>{% else %}{{ i.title }}{% endif %}</li>{% endfor %}</ul>{% endif %}
+  {% if gun.geciken %}<p><b>Gecikmiş:</b> {% for i in gun.geciken %}{{ i.title }} ({{ i.date[8:10] }}.{{ i.date[5:7] }}){{ ', ' if not loop.last }}{% endfor %}</p>{% endif %}
+  {% if gun.g_bugun or gun.g_gec %}<p><b>Görev takibi:</b>
+    {% for g in gun.g_bugun %}<span class="tag person">{{ g.kisi }}</span> {{ g.baslik }} · bitiş bugün{{ ';' if not loop.last or gun.g_gec }} {% endfor %}
+    {% for g in gun.g_gec %}<span class="tag person">{{ g.kisi }}</span> {{ g.baslik }} · <b style="color:var(--red)">{{ g._gun }} gün gecikti</b>{{ ';' if not loop.last }} {% endfor %}</p>{% endif %}
+</article>
+{% endif %}
 {% if d.bildirim %}<div class="note">{{ d.bildirim }}</div>{% endif %}
 
 <h2><span class="dot" style="background:var(--red)"></span>Şikâyetler <small>tüm gelen kutusu, rehber şikâyetleri dahil</small></h2>

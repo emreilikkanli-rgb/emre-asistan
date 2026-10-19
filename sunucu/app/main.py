@@ -9,7 +9,7 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import auth, db, jobs
+from . import ajanda as ajanda_mod, auth, db, jobs
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 TZ = ZoneInfo("Europe/Istanbul")
@@ -123,7 +123,7 @@ def ana(request: Request):
     sid, redir = _guard(request)
     if redir:
         return redir
-    return _page(request, "rapor.html", sid, r=db.get_report(), son=db.list_reports(1))
+    return _page(request, "rapor.html", sid, r=db.get_report(), son=db.list_reports(1), gun=ajanda_mod.today_summary())
 
 
 @app.get("/rapor/{rid}", response_class=HTMLResponse)
@@ -173,3 +173,131 @@ async def ayarlar_kaydet(request: Request):
     db.save_settings(values)
     jobs.start()  # takvim değiştiyse yeniden kur
     return RedirectResponse("/ayarlar?ok=1", status_code=303)
+
+
+# ---------- Ajanda ----------
+import json as _json
+import re as _re
+
+from fastapi.responses import Response
+
+_APP_DIR = os.path.dirname(__file__)
+_ID_RE = _re.compile(r"^[A-Za-z0-9_\-.~:@+]{1,200}$")
+_MAX_DOC = 256 * 1024
+
+
+def _ajanda_html():
+    with open(os.path.join(_APP_DIR, "ajanda.html"), encoding="utf-8") as f:
+        return f.read()
+
+
+@app.get("/ajanda", response_class=HTMLResponse)
+def ajanda(request: Request):
+    sid, redir = _guard(request)
+    if redir:
+        return redir
+    head = ('<!doctype html><html lang="tr"><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
+            '<meta name="robots" content="noindex, nofollow"><meta name="csrf" content="%s">'
+            '<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}'
+            'body{margin:0;font:14px system-ui,-apple-system,sans-serif}[hidden]{display:none!important}'
+            '.ea-geri{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:30;'
+            'font:600 13px system-ui,sans-serif;padding:8px 12px;border-radius:999px;background:#1f5fa8;color:#fff;text-decoration:none;'
+            'box-shadow:0 2px 8px rgb(0 0 0/.2)}</style>'
+            '<script src="/ajanda/kopru.js"></script></head><body>') % auth.csrf_token(sid)
+    tail = '<a class="ea-geri" href="/">Mail raporları</a></body></html>'
+    return HTMLResponse(head + _ajanda_html() + tail)
+
+
+@app.get("/ajanda/kopru.js")
+def ajanda_kopru(request: Request):
+    sid, redir = _guard(request)
+    if redir:
+        return PlainTextResponse("", status_code=401)
+    with open(os.path.join(_APP_DIR, "ajanda_kopru.js"), encoding="utf-8") as f:
+        return Response(f.read(), media_type="application/javascript")
+
+
+def _api_guard(request, write=False):
+    sid = auth.current_session(request)
+    if not sid:
+        return None, PlainTextResponse("Oturum yok", status_code=401)
+    if write and not auth.csrf_ok(sid, request.headers.get("x-csrf", "")):
+        return None, PlainTextResponse("Geçersiz istek", status_code=400)
+    return sid, None
+
+
+def _check(col, doc_id=None):
+    return col in db.DOC_COLLECTIONS and (doc_id is None or _ID_RE.match(doc_id))
+
+
+@app.get("/api/db/{col}")
+def api_list(request: Request, col: str):
+    _, err = _api_guard(request)
+    if err:
+        return err
+    if not _check(col):
+        return PlainTextResponse("Bilinmeyen koleksiyon", status_code=404)
+    return db.doc_list(col)
+
+
+@app.get("/api/db/{col}/{doc_id}")
+def api_get(request: Request, col: str, doc_id: str):
+    _, err = _api_guard(request)
+    if err:
+        return err
+    body = db.doc_get(col, doc_id) if _check(col, doc_id) else None
+    return {"data": body} if body is not None else PlainTextResponse("Yok", status_code=404)
+
+
+@app.put("/api/db/{col}/{doc_id}")
+async def api_set(request: Request, col: str, doc_id: str):
+    _, err = _api_guard(request, write=True)
+    if err:
+        return err
+    if not _check(col, doc_id):
+        return PlainTextResponse("Geçersiz yol", status_code=400)
+    raw = await request.body()
+    if len(raw) > _MAX_DOC:
+        return PlainTextResponse("Kayıt çok büyük", status_code=413)
+    try:
+        body = _json.loads(raw)
+    except ValueError:
+        return PlainTextResponse("Geçersiz JSON", status_code=400)
+    if not isinstance(body, dict):
+        return PlainTextResponse("Kayıt bir nesne olmalı", status_code=400)
+    db.doc_set(col, doc_id, body)
+    return Response(status_code=204)
+
+
+@app.delete("/api/db/{col}/{doc_id}")
+def api_delete(request: Request, col: str, doc_id: str):
+    _, err = _api_guard(request, write=True)
+    if err:
+        return err
+    if _check(col, doc_id):
+        db.doc_delete(col, doc_id)
+    return Response(status_code=204)
+
+
+@app.post("/ayarlar/ice-aktar")
+async def ice_aktar(request: Request):
+    """claude.ai ajandasından alınan JSON yedeğini içe aktarır: {"items": [{"id", "data"}], ...}."""
+    sid, redir = _guard(request)
+    if redir:
+        return redir
+    form = await request.form()
+    if not auth.csrf_ok(sid, form.get("csrf", "")):
+        return PlainTextResponse("Geçersiz istek.", status_code=400)
+    up = form.get("dosya")
+    try:
+        data = _json.loads((await up.read()).decode("utf-8")) if up else {}
+    except (ValueError, AttributeError):
+        return RedirectResponse("/ayarlar?aktar=hata", status_code=303)
+    n = 0
+    for col in ("items", "gorevler", "plans"):
+        for row in data.get(col) or []:
+            if isinstance(row, dict) and _check(col, str(row.get("id", ""))) and isinstance(row.get("data"), dict):
+                db.doc_set(col, row["id"], row["data"])
+                n += 1
+    return RedirectResponse("/ayarlar?aktar=%d" % n, status_code=303)

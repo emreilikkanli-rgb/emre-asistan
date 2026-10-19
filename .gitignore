@@ -10,3 +10,4 @@ sunucu/.venv/
 sunucu/data/
 __pycache__/
 *.pyc
+ajanda/ajanda_yedek.json
