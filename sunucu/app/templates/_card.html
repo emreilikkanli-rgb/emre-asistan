@@ -33,15 +33,16 @@
 {% endmacro %}
 
 {% macro pano(pid, baslik, aciklama, ikon, renk, kartlar, links, rid, bos, alt='') %}
-  <section class="p-card" id="{{ pid }}" style="--c: var(--{{ renk }}); --cbg: var(--{{ renk }}-bg)">
-    <header class="p-head">
+  <details class="p-card {{ 'bos' if not kartlar }}" id="{{ pid }}" style="--c: var(--{{ renk }}); --cbg: var(--{{ renk }}-bg)">
+    <summary class="p-head">
       <span class="p-ikon" aria-hidden="true">{{ ikon }}</span>
-      <div><h3>{{ baslik }}</h3><p>{{ aciklama }}</p></div>
+      <span class="p-baslik"><b>{{ baslik }}</b><small>{{ aciklama }}</small></span>
       <span class="p-say">{{ kartlar|length }}</span>
-    </header>
+      <span class="p-ok" aria-hidden="true"></span>
+    </summary>
     {% if kartlar %}
       <ul class="p-list">{% for c in kartlar %}{{ satir(c, links, rid) }}{% endfor %}</ul>
     {% else %}<p class="p-bos">{{ bos }}</p>{% endif %}
     {% if alt %}<p class="p-alt">{{ alt }}</p>{% endif %}
-  </section>
+  </details>
 {% endmacro %}

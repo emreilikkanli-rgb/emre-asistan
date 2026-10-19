@@ -13,18 +13,10 @@
 <header>
   <p class="hub-sub" style="margin:0 0 4px">Emre'nin Mailleri</p>
   <h1>{{ 'Günaydın Emre Bey' if r.kind == 'sabah' else 'Gün içi kontrol' }}</h1>
-  <p>{{ r.created_at | uzun_tarih }} · {{ s.period }} · <a href="/raporlar">Tüm raporlar</a></p>
+  <p>{{ r.created_at | uzun_tarih }} · {{ s.period }} · <b>{{ s.total }}</b> mail tarandı · <a href="/raporlar">Tüm raporlar</a></p>
 </header>
 
 {# p: tekrarsız pano verisi (analyze.tekillestir). Her mail ve konu yalnızca bir başlıkta görünür. #}
-<nav class="stats" aria-label="Rapor özeti">
-  <a class="stat" href="#gruplar"><b>{{ s.total }}</b><span>gelen mail</span></a>
-  <a class="stat" href="#p-vip" style="--c: var(--violet)"><b>{{ p.vip|length }}</b><span>önemli kişiler</span></a>
-  <a class="stat" href="#p-takip" style="--c: var(--amber)"><b>{{ p.takip|length }}</b><span>takip edilecek</span></a>
-  <a class="stat" href="#p-ortak" style="--c: var(--teal)"><b>{{ p.ortak|length }}</b><span>karşılıklı tartışma</span></a>
-  <a class="stat {{ 'alert' if p.sikayet }}" href="#p-sikayet" style="--c: var(--red)"><b>{{ p.sikayet|length }}</b><span>şikâyet</span></a>
-  <a class="stat" href="#p-odeme" style="--c: var(--orange)"><b>{{ p.odeme|length }}</b><span>ödeme maili</span></a>
-</nav>
 
 {% if d.bildirim %}<div class="note">{{ d.bildirim }}</div>{% endif %}
 
@@ -49,8 +41,9 @@
 </article>
 {% endif %}
 
-{% if p.bilgi %}<h2><span class="dot" style="background:var(--blue)"></span>Bilgi amaçlı</h2>
-<ul class="compact">{% for b in p.bilgi %}<li>{{ b.metin }}{% if b.kim %}<span class="meta">{{ b.kim }}</span>{% endif %}</li>{% endfor %}</ul>{% endif %}
+<div class="diger">
+{% if p.bilgi %}<details><summary>Bilgi amaçlı ({{ p.bilgi|length }})</summary>
+<ul class="compact">{% for b in p.bilgi %}<li>{{ b.metin }}{% if b.kim %}<span class="meta">{{ b.kim }}</span>{% endif %}</li>{% endfor %}</ul></details>{% endif %}
 
 {% if d.rutin_zincirler %}<details><summary>Uzayan ortak yazışmalar (rutin, {{ d.rutin_zincirler|length }})</summary><table>
 {% for z in d.rutin_zincirler %}<tr><td>{{ z.metin }}</td><td class="n">{{ z.adet }}</td></tr>{% endfor %}</table></details>{% endif %}
@@ -58,6 +51,7 @@
 {% for z in d.otomatik %}<tr><td>{{ z.metin }}</td><td class="n">{{ z.adet }}</td></tr>{% endfor %}</table></details>{% endif %}
 <details id="gruplar"><summary>Grup adreslerine gelenler ({{ s.others_total }})</summary><table>
 {% for g in d._gruplar %}<tr><td>{{ g[0] }}</td><td class="n">{{ g[1] }}</td></tr>{% endfor %}</table></details>
+</div>
 
 <footer>Mailler salt okunur tarandı; hiçbir mail okundu işaretlenmedi. Bu rapor: ${{ '%.3f' % r.cost }} · bu ay toplam: ${{ '%.2f' % aylik }} / ${{ ayarlar.aylik_limit_usd }} limit.</footer>
 <script>
