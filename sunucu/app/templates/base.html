@@ -168,6 +168,11 @@
   .diger summary { font-weight: 500; color: var(--muted); font-size: 14px; }
   .diger ul.compact { border: 0; margin-top: 6px; }
   details[id] { scroll-margin-top: 16px; }
+  .guncel { display: none; }
+  .guncel.on { display: flex; gap: 10px; align-items: center; margin: 16px 0 0; padding: 10px 14px; border-radius: 10px; font-size: 14px; background: var(--blue-bg); color: var(--blue); }
+  .guncel.hata { background: var(--red-bg); color: var(--red); }
+  .spin { width: 14px; height: 14px; flex: 0 0 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: don 0.8s linear infinite; }
+  @keyframes don { to { transform: rotate(360deg); } }
   @media (max-width: 520px) { .p-head { padding: 14px; gap: 10px; } .p-baslik small { display: none; } .p-row { padding: 12px 14px; } }
   @media (max-width: 420px) { .hub-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>

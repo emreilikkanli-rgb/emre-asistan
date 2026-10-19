@@ -80,6 +80,41 @@ def run(kind="sabah", hours=None):
         _run_lock.release()
 
 
+GUNCEL_DK = 15  # sayfa açılınca: son kontrol bundan eskiyse mailleri yeniden kontrol et
+_ajanda_son = [0.0]
+
+
+def calisiyor():
+    return _run_lock.locked()
+
+
+def guncelle_baslat():
+    """Mail sayfası açılınca/yenilenince çağrılır. Son kontrol GUNCEL_DK dakikadan eskiyse
+    son 24 saati arka planda yeniden kontrol eder. Başarısız denemeler de sayılır: Exchange'e
+    art arda hatalı giriş denemesi yapılmaz. Dönüş: "calisiyor" | "basladi" | "guncel"."""
+    if _run_lock.locked():
+        return "calisiyor"
+    last = db.list_reports(1)
+    if last:
+        try:
+            prev = datetime.fromisoformat(last[0]["created_at"])
+            if (datetime.now(prev.tzinfo) - prev).total_seconds() < GUNCEL_DK * 60:
+                return "guncel"
+        except ValueError:
+            pass
+    threading.Thread(target=run, args=("guncel", 24), daemon=True).start()
+    return "basladi"
+
+
+def ajanda_guncelle():
+    """Ajanda sayfası açılınca: "EA:" maillerini hemen işle (en sık 3 dakikada bir)."""
+    import time
+    if time.time() - _ajanda_son[0] < 180:
+        return
+    _ajanda_son[0] = time.time()
+    threading.Thread(target=ajanda_tick, daemon=True).start()
+
+
 def start():
     cfg = db.get_settings()
     scheduler.remove_all_jobs()

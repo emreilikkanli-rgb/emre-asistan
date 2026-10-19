@@ -2,7 +2,10 @@
 {% block body %}
 {% from "_card.html" import pano %}
 {% set aktif = 'rapor' %}{% include "_nav.html" %}
-{% if not r %}
+{% if not r and guncelleniyor %}
+  <div class="guncel on" role="status"><span class="spin"></span>Mailler şimdi kontrol ediliyor; rapor hazır olunca sayfa yenilenecek.</div>
+  <meta http-equiv="refresh" content="15">
+{% elif not r %}
   <div class="note">Henüz rapor yok. İlk kontrol takvime göre çalışacak; isterseniz şimdi başlatın.</div>
   <form method="post" action="/calistir" class="row"><input type="hidden" name="csrf" value="{{ csrf }}">
     <button class="btn primary" name="tur" value="sabah" type="submit">Son 24 saati şimdi kontrol et</button></form>
@@ -12,9 +15,10 @@
 {% set d = r.data %}{% set links = d._links or {} %}{% set s = r.stats %}
 <header>
   <p class="hub-sub" style="margin:0 0 4px">Emre'nin Mailleri</p>
-  <h1>{{ 'Günaydın Emre Bey' if r.kind == 'sabah' else 'Gün içi kontrol' }}</h1>
+  <h1>{{ 'Günaydın Emre Bey' if r.kind == 'sabah' else 'Güncel durum' if r.kind == 'guncel' else 'Gün içi kontrol' }}</h1>
   <p>{{ r.created_at | uzun_tarih }} · {{ s.period }} · <b>{{ s.total }}</b> mail tarandı · <a href="/raporlar">Tüm raporlar</a></p>
 </header>
+<div class="guncel {{ 'on' if guncelleniyor }}" id="guncel" role="status">{% if guncelleniyor %}<span class="spin"></span>Mailler şimdi kontrol ediliyor; yeni rapor hazır olunca sayfa kendiliğinden yenilenecek.{% endif %}</div>
 
 {# p: tekrarsız pano verisi (analyze.tekillestir). Her mail ve konu yalnızca bir başlıkta görünür. #}
 
@@ -55,6 +59,31 @@
 
 <footer>Mailler salt okunur tarandı; hiçbir mail okundu işaretlenmedi. Bu rapor: ${{ '%.3f' % r.cost }} · bu ay toplam: ${{ '%.2f' % aylik }} / ${{ ayarlar.aylik_limit_usd }} limit.</footer>
 <script>
+  // Güncel tutma: kontrol sürüyorsa bekle, yeni rapor gelince sayfayı yenile; sayfaya geri dönünce yeniden kontrol iste
+  (function () {
+    var rid = {{ r.id }}, kutu = document.getElementById('guncel'), zaman = null;
+    var csrf = '{{ csrf }}';
+    function yaz(html, cls) { kutu.className = 'guncel on ' + (cls || ''); kutu.innerHTML = html; }
+    function izle() {
+      clearTimeout(zaman);
+      fetch('/api/rapor-durum', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.rid && d.rid !== rid) { location.reload(); return; }
+        if (d.calisiyor) { zaman = setTimeout(izle, 4000); return; }
+        if (d.hata) yaz('Son kontrol yapılamadı: ' + d.hata.replace(/[<>&]/g, ''), 'hata');
+        else { kutu.className = 'guncel'; kutu.innerHTML = ''; }
+      }).catch(function () { zaman = setTimeout(izle, 8000); });
+    }
+    function iste() {
+      fetch('/api/rapor-guncelle', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF': csrf } })
+        .then(function (r) { return r.json(); }).then(function (d) {
+          if (d.durum === 'basladi' || d.durum === 'calisiyor') { yaz('<span class="spin"></span>Mailler şimdi kontrol ediliyor…'); izle(); }
+          else izle();
+        }).catch(function () {});
+    }
+    if (kutu.classList.contains('on')) izle();
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) iste(); });
+    window.addEventListener('pageshow', function (e) { if (e.persisted) iste(); });
+  })();
   // Sayıya tıklanınca: hedef kapalı bir açılır bölümse aç
   function acHedef() { var t = location.hash && document.getElementById(location.hash.slice(1)); if (t && t.tagName === 'DETAILS') t.open = true; }
   window.addEventListener('hashchange', acHedef); acHedef();

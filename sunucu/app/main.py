@@ -141,8 +141,29 @@ def mailler(request: Request):
     sid, redir = _guard(request)
     if redir:
         return redir
+    durum = jobs.guncelle_baslat()
     r = db.get_report()
-    return _page(request, "rapor.html", sid, r=r, p=_pano(r), son=db.list_reports(1), gun=ajanda_mod.today_summary())
+    return _page(request, "rapor.html", sid, r=r, p=_pano(r), son=db.list_reports(1), gun=ajanda_mod.today_summary(),
+                 guncelleniyor=durum in ("basladi", "calisiyor"))
+
+
+@app.get("/api/rapor-durum")
+def rapor_durum(request: Request):
+    _, err = _api_guard(request)
+    if err:
+        return err
+    son = db.list_reports(1)
+    ok = db.get_report()
+    return {"calisiyor": jobs.calisiyor(), "rid": ok["id"] if ok else 0,
+            "hata": son[0]["error"] if son and son[0]["status"] != "ok" else ""}
+
+
+@app.post("/api/rapor-guncelle")
+def rapor_guncelle(request: Request):
+    _, err = _api_guard(request, write=True)
+    if err:
+        return err
+    return {"durum": jobs.guncelle_baslat()}
 
 
 @app.get("/rapor/{rid}", response_class=HTMLResponse)
@@ -216,6 +237,7 @@ def ajanda(request: Request):
     sid, redir = _guard(request)
     if redir:
         return redir
+    jobs.ajanda_guncelle()  # "EA:" maillerini hemen işle; yeni kayıtlar sayfaya 5 sn içinde düşer
     head = ('<!doctype html><html lang="tr"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
             '<meta name="robots" content="noindex, nofollow"><meta name="csrf" content="%s">'
