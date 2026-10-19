@@ -127,9 +127,13 @@ def _jeton_ozeti(t):
     return hashlib.sha256(("ea-sifirla:" + (t or "")).encode()).hexdigest()
 
 
-def sifirlama_iste(mail, ip):
+def sifirlama_iste(mail, ip, yeni_kullanici=""):
     """Yazılan adres kurtarma adresiyse (jeton, None) döner; değilse (None, neden).
-    Link yalnızca KURTARMA_MAIL adresine gönderilir; yazılan adrese asla gönderilmez."""
+    Link yalnızca KURTARMA_MAIL adresine gönderilir; yazılan adrese asla gönderilmez.
+    yeni_kullanici: hesap oluştururken seçilen kullanıcı adı; mail doğrulanınca kaydedilir."""
+    yeni_kullanici = (yeni_kullanici or "").strip().lower()
+    if yeni_kullanici and not KULLANICI_RE.match(yeni_kullanici):
+        return None, "kullanici"
     if not hmac.compare_digest((mail or "").strip().lower(), KURTARMA_MAIL):
         db.fail_add(ip, time.time())
         return None, "adres"
@@ -143,7 +147,13 @@ def sifirlama_iste(mail, ip):
     t = secrets.token_urlsafe(32)
     db.kimlik_set("sifirlama", "%s|%d" % (_jeton_ozeti(t), int(now + RESET_SURE)))
     db.kimlik_set("sifirlama_gecmis", ",".join("%.0f" % x for x in gecmis + [now]))
+    if yeni_kullanici:
+        db.kimlik_set("bekleyen_kullanici", yeni_kullanici)
     return t, None
+
+
+def bekleyen_kullanici():
+    return db.kimlik_get("bekleyen_kullanici")
 
 
 def sifirlama_gecerli(t):
@@ -166,6 +176,7 @@ def sifirlama_tamamla(t, username, password, ip):
     db.kimlik_set("kullanici", username)
     db.kimlik_set("sifre", _ph.hash(password))
     db.kimlik_del("sifirlama")  # link tek kullanımlık
+    db.kimlik_del("bekleyen_kullanici")
     db.session_delete()          # eski şifreyle açılmış tüm oturumlar kapanır
     db.fail_clear(ip)
-    return _oturum_ac(ip), None
+    return _oturum_ac(ip, hatirla=True), None  # kayıttan sonra bu cihaz 30 gün hatırlanır

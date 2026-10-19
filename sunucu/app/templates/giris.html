@@ -20,11 +20,14 @@
     <div class="alan"><label for="kod">Doğrulama kodu</label><div class="kutu">{{ ikon_kilit }}<input type="text" id="kod" name="kod" required inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7" autocomplete="one-time-code"></div></div>
     {% endif %}
     <div class="satir">
-      <label class="hatirla"><input type="checkbox" name="hatirla" value="1"> Beni hatırla</label>
+      <label class="hatirla"><input type="checkbox" name="hatirla" value="1" checked> Beni hatırla</label>
       <a href="/sifremi-unuttum">Şifremi unuttum</a>
     </div>
     <button class="dugme" type="submit">Giriş yap</button>
-    {% if not kullanici_var %}<p class="ipucu">Henüz kullanıcı adı oluşturulmadı: mevcut şifrenizle girebilir ya da <a href="/sifremi-unuttum">Şifremi unuttum</a> ile kullanıcı adı ve yeni şifre oluşturabilirsiniz.</p>{% endif %}
+    {% if not kullanici_var %}
+    <div class="ayrac">ilk kez mi giriyorsunuz?</div>
+    <a class="dugme ikincil" href="/sifremi-unuttum">Kullanıcı adı ve şifre oluştur</a>
+    {% endif %}
   </form>
   {% endif %}
 {% endblock %}

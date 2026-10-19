@@ -122,44 +122,54 @@ def giris(request: Request, kullanici: str = Form(""), sifre: str = Form(""), ko
 
 @app.get("/sifremi-unuttum", response_class=HTMLResponse)
 def sifremi_unuttum_form(request: Request):
-    return _giris_sayfa(request, "sifre_unuttum.html")
+    return _giris_sayfa(request, "sifre_unuttum.html", olustur=not auth.kullanici())
+
+
+@app.get("/hesap-olustur")
+def hesap_olustur_form(request: Request):
+    return RedirectResponse("/sifremi-unuttum", status_code=303)
 
 
 @app.post("/sifremi-unuttum", response_class=HTMLResponse)
-def sifremi_unuttum(request: Request, mail: str = Form("")):
+def sifremi_unuttum(request: Request, mail: str = Form(""), kullanici: str = Form("")):
     ip = auth.client_ip(request)
+    olustur = not auth.kullanici()  # henüz hesap yoksa: kullanıcı adı da burada seçilir
+    sayfa = lambda kod, **k: _giris_sayfa(request, "sifre_unuttum.html", kod, olustur=olustur, kullanici=kullanici, mail=mail, **k)
     lock = auth.lockout_message(ip)
     if lock:
-        return _giris_sayfa(request, "sifre_unuttum.html", 429, hata=lock)
-    t, neden = auth.sifirlama_iste(mail, ip)
+        return sayfa(429, hata=lock)
+    t, neden = auth.sifirlama_iste(mail, ip, kullanici if olustur else "")
+    if neden == "kullanici":
+        return sayfa(400, hata="Kullanıcı adı 3–32 karakter olmalı; harf, rakam, nokta, tire ya da alt çizgi kullanın (Türkçe karakter ve boşluk olmadan).")
     if neden == "sik":
-        return _giris_sayfa(request, "sifre_unuttum.html", 429, hata="Az önce bir link gönderildi. Gelen kutunuzu kontrol edin; 5 dakika sonra yeniden isteyebilirsiniz.")
+        return sayfa(429, hata="Az önce bir link gönderildi. Gelen kutunuzu kontrol edin; 5 dakika sonra yeniden isteyebilirsiniz.")
     if neden == "gunluk":
-        return _giris_sayfa(request, "sifre_unuttum.html", 429, hata="Bugün için link sınırına ulaşıldı. Yarın yeniden deneyin.")
+        return sayfa(429, hata="Bugün için link sınırına ulaşıldı. Yarın yeniden deneyin.")
     if t:
         link = "%s/sifre-yenile?t=%s" % (os.environ.get("APP_URL", "https://ea-sunucu-production.up.railway.app").rstrip("/"), t)
         html = ('<div style="font:15px Calibri,Arial,sans-serif;color:#17202e;max-width:520px">'
-                "<p>Merhaba Emre Bey,</p><p>Emre'nin Asistanı için yeni kullanıcı adı ve şifre oluşturmak üzere aşağıdaki düğmeye basın. "
+                "<p>Merhaba Emre Bey,</p><p>Emre'nin Asistanı kullanıcı adınızı doğrulamak ve şifrenizi oluşturmak için aşağıdaki düğmeye basın. "
                 "Link <b>30 dakika</b> geçerlidir ve yalnızca bir kez kullanılabilir.</p>"
                 '<p><a href="%s" style="display:inline-block;padding:12px 22px;border-radius:10px;background:#5b4fe9;color:#fff;text-decoration:none;font-weight:600">'
                 "Yeni şifre oluştur</a></p><p style=\"color:#6b6a66;font-size:13px\">Bu isteği siz yapmadıysanız bu maili dikkate almayın; şifreniz değişmez.</p></div>") % _html.escape(link)
         try:
             ews = Ews(os.environ.get("EWS_HOST", ""), os.environ.get("EWS_USER", ""), os.environ.get("EWS_PASSWORD", ""))
-            ews_gonder.send(ews, auth.KURTARMA_MAIL, "Emre'nin Asistanı · şifre yenileme linki", html)
+            ews_gonder.send(ews, auth.KURTARMA_MAIL, "Emre'nin Asistanı · doğrulama linki", html)
             log.info("Şifre yenileme linki gönderildi")
         except (EwsError, ValueError) as ex:
             log.warning("Şifre yenileme maili gönderilemedi: %s", ex)
             db.kimlik_del("sifirlama")
-            return _giris_sayfa(request, "sifre_unuttum.html", 502, hata="Mail gönderilemedi. Biraz sonra yeniden deneyin.")
+            return sayfa(502, hata="Mail gönderilemedi. Biraz sonra yeniden deneyin.")
     # Adres yanlış olsa da aynı cevap: hangi adresin kayıtlı olduğu dışarıya söylenmez
-    return _giris_sayfa(request, "sifre_unuttum.html", gonderildi=True)
+    return sayfa(200, gonderildi=True)
 
 
 @app.get("/sifre-yenile", response_class=HTMLResponse)
 def sifre_yenile_form(request: Request, t: str = ""):
     if not auth.sifirlama_gecerli(t):
         return _giris_sayfa(request, "sifre_yenile.html", 400, gecersiz=True)
-    return _giris_sayfa(request, "sifre_yenile.html", t=t, kullanici=auth.kullanici())
+    return _giris_sayfa(request, "sifre_yenile.html", t=t, kullanici=auth.bekleyen_kullanici() or auth.kullanici(),
+                        dogrulandi=bool(auth.bekleyen_kullanici() or auth.kullanici()))
 
 
 @app.post("/sifre-yenile", response_class=HTMLResponse)
@@ -171,7 +181,7 @@ def sifre_yenile(request: Request, t: str = Form(""), kullanici: str = Form(""),
         return _giris_sayfa(request, "sifre_yenile.html", 400, t=t, kullanici=kullanici, hata=hata,
                             gecersiz=not auth.sifirlama_gecerli(t))
     resp = RedirectResponse("/", status_code=303)
-    resp.set_cookie(auth.COOKIE, auth.cookie_value(sid), httponly=True, secure=SECURE, samesite="strict")
+    resp.set_cookie(auth.COOKIE, auth.cookie_value(sid), max_age=auth.HATIRLA_MAX, httponly=True, secure=SECURE, samesite="lax")
     return resp
 
 

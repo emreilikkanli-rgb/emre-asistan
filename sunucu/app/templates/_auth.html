@@ -83,11 +83,14 @@
   .not { padding: 11px 14px; border-radius: 12px; font-size: 14px; line-height: 1.45; }
   .not.hata { background: rgba(255,90,90,.12); border: 1px solid rgba(255,120,120,.3); color: #ffd1d1; }
   .not.ok { background: rgba(110,231,183,.1); border: 1px solid rgba(110,231,183,.3); color: #c9f7e4; }
+  .dugme.ikincil { background: rgba(255,255,255,.07); border: 1px solid rgba(160,148,255,.45); box-shadow: none; text-align: center; text-decoration: none; display: block; }
+  .dugme.ikincil::after { display: none; }
+  .dugme.ikincil:hover { background: rgba(124,108,255,.18); text-decoration: none; }
+  .ayrac { display: flex; align-items: center; gap: 10px; color: #8f8ab3; font-size: 12px; }
+  .ayrac::before, .ayrac::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .dogru { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: 700; color: var(--ok); }
+  .kutu input[readonly] { color: #e9e6ff; background: rgba(110,231,183,.06); border-color: rgba(110,231,183,.35); }
   .ipucu { margin: 0; font-size: 12.5px; color: var(--muted); }
-  .ozel { margin-top: 20px; display: flex; gap: 10px; align-items: flex-start; padding: 11px 13px; border-radius: 12px; font-size: 12.5px; line-height: 1.45; color: #c4bfe3;
-    background: rgba(255,255,255,.04); border: 1px solid var(--line); }
-  .ozel svg { flex: 0 0 18px; width: 18px; height: 18px; color: #b9adff; margin-top: 1px; }
-  .ozel b { color: #ece9ff; }
   .alt-bilgi { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; justify-content: center; align-items: center; gap: 8px; color: #8f8ab3; font-size: 12px; }
   .alt-bilgi b { color: #d7d1ff; font-weight: 600; }
   .nokta { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok); }
@@ -106,8 +109,6 @@
       {% block yetenek %}<div class="yetenek"><span>Ajanda</span><span>Mail özeti</span><span>Görev takibi</span><span>Hatırlatmalar</span></div>{% endblock %}
     </div>
     {% block icerik %}{% endblock %}
-    <div class="ozel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
-      <span><b>Emre İlikkanli'ya özel</b> kişisel asistan. Üyelik yoktur; Emre İlikkanli'nın izni olmadan kimse giriş yapamaz.</span></div>
     <div class="alt-bilgi"><span class="nokta"></span><span>Güvenli bağlantı · <b>Claude</b> ile çalışır</span></div>
   </section>
 </main>
