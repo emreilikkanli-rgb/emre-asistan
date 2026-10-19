@@ -1,0 +1,9 @@
+<nav class="nav">
+  <a class="brand" href="/"><i>EA</i>Emre'nin Asistanı</a>
+  <div class="links">
+    <a href="/" class="{{ 'on' if aktif == 'rapor' }}">Son rapor</a>
+    <a href="/raporlar" class="{{ 'on' if aktif == 'raporlar' }}">Raporlar</a>
+    <a href="/ayarlar" class="{{ 'on' if aktif == 'ayarlar' }}">Ayarlar</a>
+    <form class="inline" method="post" action="/cikis"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit">Çıkış</button></form>
+  </div>
+</nav>

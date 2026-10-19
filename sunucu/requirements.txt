@@ -1,0 +1,12 @@
+anthropic==0.125.0
+APScheduler==3.11.3
+argon2-cffi==25.1.0
+fastapi==0.128.8
+itsdangerous==2.2.0
+Jinja2==3.1.6
+PyOTP==2.10.0
+python-multipart==0.0.20
+requests==2.32.5
+requests_ntlm==1.3.0
+tzdata==2025.2
+uvicorn[standard]==0.39.0

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block body %}
+{% set aktif = 'raporlar' %}{% include "_nav.html" %}
+<header><h1>Raporlar</h1><p>Takvim: {{ ayarlar.takvim | replace('=sabah', ' sabah raporu') | replace('=ara', ' ara kontrol') | replace(';', ' · ') }} (Türkiye saati)</p></header>
+{% if request.query_params.get('basladi') %}<div class="note ok">Kontrol başlatıldı. Bir-iki dakika içinde bu listede görünür; sayfayı yenileyin.</div>{% endif %}
+<form method="post" action="/calistir" class="row" style="margin:16px 0"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <button class="btn primary" name="tur" value="ara" type="submit">Son raporu bu yana kontrol et</button>
+  <button class="btn" name="tur" value="sabah" type="submit">Son 24 saati kontrol et</button>
+</form>
+<ul class="compact">
+{% for x in liste %}
+  <li>{% if x.status == 'ok' %}<a href="/rapor/{{ x.id }}">{{ 'Sabah raporu' if x.kind == 'sabah' else 'Ara kontrol' }} · {{ x.created_at | yerel }}</a>{% else %}<b>{{ x.created_at | yerel }}</b> · {{ 'Atlandı' if x.status == 'atlandi' else 'Hata' }}: {{ x.error }}{% endif %}
+    <span class="meta">${{ '%.3f' % (x.cost or 0) }}</span></li>
+{% else %}<li class="muted">Henüz rapor yok.</li>{% endfor %}
+</ul>
+<footer>Bu ay API harcaması: ${{ '%.2f' % aylik }} / ${{ ayarlar.aylik_limit_usd }} limit. Raporlar 90 gün saklanır.</footer>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block body %}
+{% from "_card.html" import card %}
+{% set aktif = 'rapor' %}{% include "_nav.html" %}
+{% if not r %}
+  <div class="note">Henüz rapor yok. İlk kontrol takvime göre çalışacak; isterseniz şimdi başlatın.</div>
+  <form method="post" action="/calistir" class="row"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn primary" name="tur" value="sabah" type="submit">Son 24 saati şimdi kontrol et</button></form>
+{% elif r.status != 'ok' %}
+  <div class="note err">{{ r.error }}</div>
+{% else %}
+{% set d = r.data %}{% set links = d._links or {} %}{% set s = r.stats %}
+<header>
+  <h1>{{ 'Günaydın Emre Bey' if r.kind == 'sabah' else 'Gün içi kontrol' }}</h1>
+  <p>{{ r.created_at | uzun_tarih }} · {{ s.period }}</p>
+</header>
+
+<section class="stats">
+  <div class="stat"><b>{{ s.total }}</b><span>gelen mail</span></div>
+  <div class="stat alert"><b>{{ d.sikayetler|length }}</b><span>şikâyet</span></div>
+  <div class="stat"><b>{{ d.odeme|length }}</b><span>ödeme / giriş riski</span></div>
+  <div class="stat"><b>{{ d.oncelikli|length }}</b><span>öncelikli kişiden konu</span></div>
+  <div class="stat"><b>{{ d.ortak|length }}</b><span>ortak maillerde öne çıkan</span></div>
+  <div class="stat"><b>{{ d.aksiyon|length }}</b><span>aksiyon bekliyor</span></div>
+</section>
+
+{% if d.bildirim %}<div class="note">{{ d.bildirim }}</div>{% endif %}
+
+<h2><span class="dot" style="background:var(--red)"></span>Şikâyetler <small>tüm gelen kutusu, rehber şikâyetleri dahil</small></h2>
+{% for c in d.sikayetler %}{{ card(c, 'complaint', links) }}{% else %}<p class="quiet">Bu dönemde şikâyet yok.</p>{% endfor %}
+
+<h2><span class="dot" style="background:var(--orange)"></span>Ödeme talepleri ve giriş riski</h2>
+{% for c in d.odeme %}{{ card(c, 'pay', links) }}{% else %}<p class="quiet">Ödeme / giriş riski bildiren mail yok.</p>{% endfor %}
+
+<h2><span class="dot" style="background:var(--violet)"></span>Öncelikli kişiler</h2>
+{% for c in d.oncelikli %}{{ card(c, 'vip', links) }}{% else %}<p class="quiet">Öncelikli kişilerden önemli gelişme yok.</p>{% endfor %}
+{% if d.maili_olmayan_oncelikliler %}<p class="quiet">{{ d.maili_olmayan_oncelikliler | join(' · ') }}: bu dönemde mail yok.</p>{% endif %}
+
+<h2><span class="dot" style="background:var(--teal)"></span>Ortak maillerden öne çıkanlar <small>okumanız önerilir</small></h2>
+{% for c in d.ortak %}{{ card(c, 'shared', links) }}{% else %}<p class="quiet">Ortak maillerde öne çıkan tartışma yok.</p>{% endfor %}
+
+<h2><span class="dot" style="background:var(--red)"></span>Aksiyon gerektirenler</h2>
+{% for c in d.aksiyon %}{{ card(c, 'high', links) }}{% else %}<p class="quiet">Size doğrudan bekleyen konu yok.</p>{% endfor %}
+
+{% if d.takip %}<h2><span class="dot" style="background:var(--amber)"></span>Takip etmeniz gerekenler</h2>
+{% for c in d.takip %}{{ card(c, 'mid', links) }}{% endfor %}{% endif %}
+
+{% if d.bilgi %}<h2><span class="dot" style="background:var(--blue)"></span>Bilgi amaçlı</h2>
+<ul class="compact">{% for b in d.bilgi %}<li>{{ b.metin }}{% if b.kim %}<span class="meta">{{ b.kim }}</span>{% endif %}</li>{% endfor %}</ul>{% endif %}
+
+{% if d.rutin_zincirler %}<details><summary>Uzayan ortak yazışmalar (rutin, {{ d.rutin_zincirler|length }})</summary><table>
+{% for z in d.rutin_zincirler %}<tr><td>{{ z.metin }}</td><td class="n">{{ z.adet }}</td></tr>{% endfor %}</table></details>{% endif %}
+{% if d.otomatik %}<details><summary>Otomatik ve reklam mailleri</summary><table>
+{% for z in d.otomatik %}<tr><td>{{ z.metin }}</td><td class="n">{{ z.adet }}</td></tr>{% endfor %}</table></details>{% endif %}
+<details><summary>Grup adreslerine gelenler ({{ s.others_total }})</summary><table>
+{% for g in d._gruplar %}<tr><td>{{ g[0] }}</td><td class="n">{{ g[1] }}</td></tr>{% endfor %}</table></details>
+
+<footer>Mailler salt okunur tarandı; hiçbir mail okundu işaretlenmedi. Bu rapor: ${{ '%.3f' % r.cost }} · bu ay toplam: ${{ '%.2f' % aylik }} / ${{ ayarlar.aylik_limit_usd }} limit.</footer>
+{% endif %}
+{% endblock %}

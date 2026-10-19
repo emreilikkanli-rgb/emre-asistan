@@ -1,0 +1,95 @@
+"""Zamanlanmış mail kontrolleri: maili çek → sınıflandır → Haiku'ya özetlet → kaydet."""
+import logging
+import os
+import threading
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+
+from . import db
+from .analyze import analyze
+from .classify import classify
+from .ews import Ews, EwsError
+
+log = logging.getLogger("ea.jobs")
+TZ = ZoneInfo("Europe/Istanbul")
+_run_lock = threading.Lock()
+scheduler = BackgroundScheduler(timezone=TZ)
+
+
+def _hours_for(kind):
+    if kind == "sabah":
+        return 24
+    # Ara kontrol: bir önceki rapordan bu yana (en az 3, en fazla 12 saat)
+    last = db.list_reports(1)
+    if last:
+        try:
+            prev = datetime.fromisoformat(last[0]["created_at"]).astimezone(TZ)
+            h = int((datetime.now(TZ) - prev).total_seconds() // 3600) + 1
+            return max(3, min(12, h))
+        except ValueError:
+            pass
+    return 5
+
+
+def run(kind="sabah", hours=None):
+    if not _run_lock.acquire(blocking=False):
+        return None, "Zaten bir kontrol çalışıyor."
+    try:
+        cfg = db.get_settings()
+        hours = hours or _hours_for(kind)
+        limit = float(cfg.get("aylik_limit_usd") or 0)
+        spent = db.month_cost()
+        if limit and spent >= limit:
+            msg = "Aylık API limiti ($%.2f) doldu; bu kontrol atlandı. Ayarlar'dan limiti artırabilirsiniz." % limit
+            return db.add_report(kind, hours, "atlandi", error=msg), msg
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            msg = "ANTHROPIC_API_KEY ayarlanmamış."
+            return db.add_report(kind, hours, "hata", error=msg), msg
+        user = os.environ.get("EWS_USER", "")
+        cfg["user"] = user
+        ews = Ews(os.environ.get("EWS_HOST", ""), user, os.environ.get("EWS_PASSWORD", ""))
+        msgs, total = ews.find_messages(hours)
+        cfg["_total"] = total
+        result = classify(msgs, cfg)
+        ids = [m["id"] for sec in ("sikayet", "odeme", "ortak", "vip", "mine") for m in result["sections"].get(sec, [])]
+        ids += [b["latest"]["id"] for b in result["busy"]]
+        bodies = ews.get_bodies(ids, limit=90)
+        now = datetime.now(TZ)
+        label = "%s → %s" % ((now - timedelta(hours=hours)).strftime("%d.%m %H:%M"), now.strftime("%d.%m %H:%M"))
+        data, cands, usage = analyze(result, bodies, cfg, label)
+        data["_links"] = {str(i + 1): ews.owa_link(m["id"]) for i, m in enumerate(cands)}
+        data["_gruplar"] = result["others"].most_common(12)
+        stats = {"total": total, "scanned": len(msgs), "others_total": result["others_total"],
+                 "candidates": len(cands), "period": label}
+        rid = db.add_report(kind, hours, "ok", stats=stats, data=data, usage=usage)
+        db.prune_reports()
+        log.info("Rapor %s hazır: %s mail, $%.4f", rid, total, usage["cost"])
+        return rid, None
+    except EwsError as e:
+        return db.add_report(kind, hours or 0, "hata", error=str(e)), str(e)
+    except Exception as e:  # beklenmeyen hata: kaydet, sunucuyu düşürme
+        log.exception("Kontrol başarısız")
+        msg = "Beklenmeyen hata: %s" % e.__class__.__name__
+        return db.add_report(kind, hours or 0, "hata", error=msg), msg
+    finally:
+        _run_lock.release()
+
+
+def start():
+    cfg = db.get_settings()
+    scheduler.remove_all_jobs()
+    for part in (cfg.get("takvim") or "").split(";"):
+        if "=" not in part:
+            continue
+        t, kind = [x.strip() for x in part.split("=", 1)]
+        try:
+            hh, mm = [int(x) for x in t.split(":")]
+        except ValueError:
+            continue
+        scheduler.add_job(run, CronTrigger(hour=hh, minute=mm, timezone=TZ), args=[kind if kind in ("sabah", "ara") else "ara"],
+                          id="kontrol-%s" % t, replace_existing=True, misfire_grace_time=3600, coalesce=True)
+    if not scheduler.running:
+        scheduler.start()

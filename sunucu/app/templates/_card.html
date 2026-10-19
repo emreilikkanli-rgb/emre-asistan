@@ -1,0 +1,14 @@
+{% macro card(c, cls, links) %}
+  <article class="card {{ cls }}">
+    <div class="top"><h3>{{ c.baslik }}</h3><span class="meta">{{ c.zaman }}</span></div>
+    {% if c.kim %}<div class="meta">{{ c.kim }}</div>{% endif %}
+    <p>{{ c.ozet }}</p>
+    {% if c.alinti %}<blockquote class="quote">"{{ c.alinti }}"</blockquote>{% endif %}
+    {% if c.satir %}<div class="action"><b>{{ c.satir_etiketi }}:</b> {{ c.satir }}</div>{% endif %}
+    {% if c.etiketler or c.kisiler %}<div class="tags">
+      {% for k in c.kisiler %}<span class="tag person">{{ k }}</span>{% endfor %}
+      {% for e in c.etiketler %}<span class="tag {{ 'pay' if 'son tarih' in e|lower else 'comp' if 'şikâyet' in e|lower or 'şikayet' in e|lower else '' }}">{{ e }}</span>{% endfor %}
+    </div>{% endif %}
+    {% for ref in c.refs[:3] %}{% if links[ref|string] %}<a class="open" href="{{ links[ref|string] }}" target="_blank" rel="noopener noreferrer">{{ 'Maili aç ↗' if loop.first else (loop.index ~ '. mail ↗') }}</a>{% endif %}{% endfor %}
+  </article>
+{% endmacro %}

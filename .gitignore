@@ -6,3 +6,7 @@ ajanda/.ajanda_komutlari.txt
 mail.conf
 .DS_Store
 CLAUDE.md
+sunucu/.venv/
+sunucu/data/
+__pycache__/
+*.pyc
