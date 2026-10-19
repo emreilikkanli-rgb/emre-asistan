@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from . import ajanda as ajanda_mod, auth, db, ews_gonder, jobs, moduller
@@ -82,6 +82,22 @@ def _guard(request):
 @app.get("/saglik", response_class=PlainTextResponse)
 def saglik():
     return "ok"
+
+
+# Uygulama simgesi (telefon ana ekranı, tarayıcı sekmesi). Yalnızca logo görseli; veri içermez.
+_STATIC = os.path.join(os.path.dirname(__file__), "static")
+
+
+@app.get("/apple-touch-icon.png")
+@app.get("/apple-touch-icon-precomposed.png")
+def ikon_telefon():
+    return FileResponse(os.path.join(_STATIC, "apple-touch-icon.png"), media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/favicon.png")
+@app.get("/favicon.ico")
+def ikon_sekme():
+    return FileResponse(os.path.join(_STATIC, "favicon.png"), media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
 
 
 @app.get("/robots.txt", response_class=PlainTextResponse)
@@ -345,6 +361,7 @@ def ajanda(request: Request):
     head = ('<!doctype html><html lang="tr"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
             '<meta name="robots" content="noindex, nofollow"><meta name="theme-color" content="#0b0a1a"><meta name="csrf" content="%s">'
+            '<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="icon" type="image/png" href="/favicon.png"><meta name="apple-mobile-web-app-title" content="EA">'
             '<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}'
             'body{margin:0;background:#0b0a1a}[hidden]{display:none!important}'
             '.ea-menu{position:relative;z-index:2;display:flex;gap:10px;align-items:center;justify-content:space-between;max-width:1240px;margin:0 auto;'
