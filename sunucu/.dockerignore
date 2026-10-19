@@ -3,3 +3,4 @@ data
 __pycache__
 *.pyc
 kurulum.py
+railway_gizli.py

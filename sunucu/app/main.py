@@ -37,6 +37,7 @@ def _uzun_tarih(iso):
 
 
 templates.env.filters["uzun_tarih"] = _uzun_tarih
+templates.env.globals["totp_enabled"] = auth.totp_enabled
 
 
 @app.on_event("startup")
@@ -87,7 +88,7 @@ def robots():
 @app.get("/giris", response_class=HTMLResponse)
 def giris_form(request: Request):
     if not auth.configured():
-        return templates.TemplateResponse(request, "giris.html", {"hata": "Sunucu henüz kurulmadı: APP_PASSWORD_HASH, TOTP_SECRET ve SESSION_SECRET değişkenlerini Railway'de tanımlayın.", "kapali": True})
+        return templates.TemplateResponse(request, "giris.html", {"hata": "Sunucu henüz kurulmadı: APP_PASSWORD_HASH ve SESSION_SECRET değişkenlerini Railway'de tanımlayın.", "kapali": True})
     return templates.TemplateResponse(request, "giris.html", {"hata": auth.lockout_message(auth.client_ip(request))})
 
 
@@ -101,7 +102,7 @@ def giris(request: Request, sifre: str = Form(""), kod: str = Form("")):
         return templates.TemplateResponse(request, "giris.html", {"hata": lock}, status_code=429)
     sid = auth.check_login(sifre, kod, ip)
     if not sid:
-        return templates.TemplateResponse(request, "giris.html", {"hata": "Şifre ya da doğrulama kodu hatalı."}, status_code=401)
+        return templates.TemplateResponse(request, "giris.html", {"hata": "Şifre ya da doğrulama kodu hatalı." if auth.totp_enabled() else "Şifre hatalı."}, status_code=401)
     resp = RedirectResponse("/", status_code=303)
     resp.set_cookie(auth.COOKIE, auth.cookie_value(sid), max_age=auth.SESSION_MAX, httponly=True, secure=SECURE, samesite="strict")
     return resp

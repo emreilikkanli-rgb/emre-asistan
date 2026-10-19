@@ -4,11 +4,11 @@
 <div class="login">
   <form method="post" action="/giris" autocomplete="off">
     <h1>Emre'nin Asistanı</h1>
-    <p class="muted" style="margin:0">Şifrenizi ve doğrulama uygulamasındaki 6 haneli kodu girin.</p>
+    <p class="muted" style="margin:0">{{ "Şifrenizi ve doğrulama uygulamasındaki 6 haneli kodu girin." if totp_enabled() else "Şifrenizi girin." }}</p>
     {% if hata %}<div class="note err" role="alert">{{ hata }}</div>{% endif %}
     {% if not kapali %}
     <div class="field"><label for="sifre">Şifre</label><input type="password" id="sifre" name="sifre" required autocomplete="current-password"></div>
-    <div class="field"><label for="kod">Doğrulama kodu</label><input type="text" id="kod" name="kod" required inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7" autocomplete="one-time-code"></div>
+    {% if totp_enabled() %}<div class="field"><label for="kod">Doğrulama kodu</label><input type="text" id="kod" name="kod" required inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7" autocomplete="one-time-code"></div>{% endif %}
     <button class="btn primary" type="submit">Giriş yap</button>
     {% endif %}
   </form>

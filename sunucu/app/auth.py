@@ -1,7 +1,7 @@
-"""Tek kullanıcılı giriş: şifre (Argon2 özeti) + doğrulama uygulaması kodu (TOTP).
+"""Tek kullanıcılı giriş: şifre (Argon2 özeti); TOTP_SECRET tanımlıysa ayrıca doğrulama kodu.
 
 Gizli değerler yalnızca ortam değişkenlerinden okunur:
-APP_PASSWORD_HASH, TOTP_SECRET, SESSION_SECRET.
+APP_PASSWORD_HASH, SESSION_SECRET ve isteğe bağlı TOTP_SECRET.
 """
 import hashlib
 import hmac
@@ -26,7 +26,11 @@ _ph = PasswordHasher()
 
 
 def configured():
-    return all(os.environ.get(k) for k in ("APP_PASSWORD_HASH", "TOTP_SECRET", "SESSION_SECRET"))
+    return all(os.environ.get(k) for k in ("APP_PASSWORD_HASH", "SESSION_SECRET"))
+
+
+def totp_enabled():
+    return bool(os.environ.get("TOTP_SECRET"))
 
 
 def _serializer():
@@ -54,7 +58,7 @@ def check_login(password, code, ip):
         ok = _ph.verify(os.environ["APP_PASSWORD_HASH"], password or "")
     except (VerificationError, InvalidHashError):
         ok = False
-    code_ok = pyotp.TOTP(os.environ["TOTP_SECRET"]).verify((code or "").replace(" ", ""), valid_window=1)
+    code_ok = (not totp_enabled()) or pyotp.TOTP(os.environ["TOTP_SECRET"]).verify((code or "").replace(" ", ""), valid_window=1)
     if not (ok and code_ok):
         db.fail_add(ip, time.time())
         return None
