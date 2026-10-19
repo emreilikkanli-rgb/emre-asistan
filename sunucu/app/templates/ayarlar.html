@@ -16,9 +16,9 @@
   <div class="field"><label for="rehber_kelimeleri">Rehber kelimeleri</label><input type="text" id="rehber_kelimeleri" name="rehber_kelimeleri" value="{{ ayarlar.rehber_kelimeleri }}"></div>
   <div class="field"><label for="rehber_olumsuz">Rehberle birlikte geçince şikâyet sayılan kelimeler</label><textarea id="rehber_olumsuz" name="rehber_olumsuz">{{ ayarlar.rehber_olumsuz }}</textarea></div>
   <div class="field"><label for="ajanda_gonderenler">Ajanda maili gönderebilecek ek adresler</label><input type="text" id="ajanda_gonderenler" name="ajanda_gonderenler" value="{{ ayarlar.ajanda_gonderenler }}">
-    <small>Kendi şirket adresiniz zaten izinli. Konusu "EA:" ile başlayan mailler kontrol saatlerinde ve ajandayı her açtığınızda eklenir.</small></div>
+    <small>Kendi şirket adresiniz zaten izinli. Konusu "EA:" ile başlayan mailler ajandayı açtığınızda ya da yenilediğinizde eklenir.</small></div>
   <div class="field"><label for="takvim">Kontrol saatleri</label><input type="text" id="takvim" name="takvim" value="{{ ayarlar.takvim }}">
-    <small>Biçim: <code>08:30=sabah;10:30=guncel;12:30=guncel</code> (Türkiye saati). "sabah" ve "guncel" son 24 saati, "ara" bir önceki rapordan bu yanasını kontrol eder. Ajandaya gelen "EA:" mailleri de bu saatlerde işlenir. Sayfayı yenilediğinizde mailler ve ajanda ayrıca hemen kontrol edilir.</small></div>
+    <small><b>Boş bırakın:</b> otomatik kontrol yapılmaz; mailler ve ajanda yalnızca sayfayı açtığınızda ya da yenilediğinizde kontrol edilir (bütçe dostu). İsterseniz saat ekleyebilirsiniz, biçim: <code>08:30=sabah;13:00=guncel</code> (Türkiye saati; her kontrol son 24 saati kapsar ve Claude API ücreti doğurur).</small></div>
   <div class="field"><label for="aylik_limit_usd">Aylık API harcama limiti ($)</label><input type="number" id="aylik_limit_usd" name="aylik_limit_usd" min="0" step="0.5" value="{{ ayarlar.aylik_limit_usd }}">
     <small>Limit dolunca kontroller o ay durur. Bu ay: ${{ '%.2f' % aylik }}.</small></div>
   <button class="btn primary" type="submit">Kaydet</button>

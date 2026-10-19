@@ -21,7 +21,7 @@ DEFAULT_SETTINGS = {
     "rehber_olumsuz": "şikayet; şikâyet; memnun; ilgisiz; ilgilenmedi; kaba; saygısız; geç kaldı; gelmedi; ulaşılamadı; davranış; tavır; sorun; problem; hata; mağdur; complaint",
     "ajanda_gonderenler": "",
     "aylik_limit_usd": "5",
-    "takvim": "08:30=sabah;10:30=guncel;12:30=guncel;14:30=guncel;16:30=guncel;18:30=guncel;20:30=guncel;22:30=guncel",
+    "takvim": "",  # boş: otomatik kontrol yok, yalnızca sayfa açılınca/yenilenince
 }
 
 
@@ -45,9 +45,8 @@ def init():
             updated_at TEXT NOT NULL, PRIMARY KEY (collection, id));
         CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, body TEXT NOT NULL, created_at TEXT NOT NULL);
         """)
-        # 20 Ekim 2026: eski varsayılan takvim (3 kontrol) 2 saatte bir kontrole geçirilir; elle değiştirilmiş takvime dokunulmaz.
-        c.execute("UPDATE settings SET value=? WHERE key='takvim' AND value='08:30=sabah;13:00=ara;17:00=ara'",
-                  (DEFAULT_SETTINGS["takvim"],))
+        # 20 Ekim 2026 (Emre Bey'in isteği, bütçe): otomatik kontrol yok; eski varsayılan takvim boşaltılır.
+        c.execute("UPDATE settings SET value='' WHERE key='takvim' AND value='08:30=sabah;13:00=ara;17:00=ara'")
 
 
 def get_settings():

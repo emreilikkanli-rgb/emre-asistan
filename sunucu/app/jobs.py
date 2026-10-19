@@ -130,7 +130,7 @@ def start():
         kind = kind if kind in ("sabah", "ara", "guncel") else "guncel"
         scheduler.add_job(run, CronTrigger(hour=hh, minute=mm, timezone=TZ), args=[kind],
                           id="kontrol-%s" % t, replace_existing=True, misfire_grace_time=3600, coalesce=True)
-        # Ajanda ("EA:" mailleri) mail kontrolüyle aynı saatlerde güncellenir (2 saatte bir)
+        # Takvim doluysa ajanda ("EA:" mailleri) da aynı saatlerde güncellenir. Varsayılan takvim boş: otomatik güncelleme yok.
         scheduler.add_job(ajanda_tick, CronTrigger(hour=hh, minute=mm, timezone=TZ), id="ajanda-%s" % t,
                           replace_existing=True, misfire_grace_time=900, coalesce=True)
     scheduler.add_job(hatirlatma_tick, CronTrigger(minute="*/5", timezone=TZ), id="hatirlatma",
