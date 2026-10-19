@@ -21,8 +21,8 @@ scheduler = BackgroundScheduler(timezone=TZ)
 
 
 def _hours_for(kind):
-    if kind == "sabah":
-        return 24
+    if kind in ("sabah", "guncel"):
+        return 24  # sayfa her zaman son 24 saatin tam tablosunu gösterir
     # Ara kontrol: bir önceki rapordan bu yana (en az 3, en fazla 12 saat)
     last = db.list_reports(1)
     if last:
@@ -80,7 +80,7 @@ def run(kind="sabah", hours=None):
         _run_lock.release()
 
 
-GUNCEL_DK = 15  # sayfa açılınca: son kontrol bundan eskiyse mailleri yeniden kontrol et
+GUNCEL_DK = 3  # linkten yenileyince hep kontrol et; yalnızca rapor bitince sayfanın kendi yenilemesinde ikinci kez başlatma
 _ajanda_son = [0.0]
 
 
@@ -90,7 +90,7 @@ def calisiyor():
 
 def guncelle_baslat():
     """Mail sayfası açılınca/yenilenince çağrılır. Son kontrol GUNCEL_DK dakikadan eskiyse
-    son 24 saati arka planda yeniden kontrol eder. Başarısız denemeler de sayılır: Exchange'e
+    son 24 saati arka planda yeniden kontrol eder. Son kontrol hatalıysa 15 dk beklenir: Exchange'e
     art arda hatalı giriş denemesi yapılmaz. Dönüş: "calisiyor" | "basladi" | "guncel"."""
     if _run_lock.locked():
         return "calisiyor"
@@ -98,7 +98,8 @@ def guncelle_baslat():
     if last:
         try:
             prev = datetime.fromisoformat(last[0]["created_at"])
-            if (datetime.now(prev.tzinfo) - prev).total_seconds() < GUNCEL_DK * 60:
+            bekle = GUNCEL_DK if last[0]["status"] == "ok" else 15  # hatadan sonra Exchange'i 15 dk zorlama (hesap kilitlenmesin)
+            if (datetime.now(prev.tzinfo) - prev).total_seconds() < bekle * 60:
                 return "guncel"
         except ValueError:
             pass
@@ -107,9 +108,9 @@ def guncelle_baslat():
 
 
 def ajanda_guncelle():
-    """Ajanda sayfası açılınca: "EA:" maillerini hemen işle (en sık 3 dakikada bir)."""
+    """Ajanda sayfası açılınca/yenilenince: "EA:" maillerini hemen işle (en sık dakikada bir)."""
     import time
-    if time.time() - _ajanda_son[0] < 180:
+    if time.time() - _ajanda_son[0] < 60:
         return
     _ajanda_son[0] = time.time()
     threading.Thread(target=ajanda_tick, daemon=True).start()
@@ -126,10 +127,12 @@ def start():
             hh, mm = [int(x) for x in t.split(":")]
         except ValueError:
             continue
-        scheduler.add_job(run, CronTrigger(hour=hh, minute=mm, timezone=TZ), args=[kind if kind in ("sabah", "ara") else "ara"],
+        kind = kind if kind in ("sabah", "ara", "guncel") else "guncel"
+        scheduler.add_job(run, CronTrigger(hour=hh, minute=mm, timezone=TZ), args=[kind],
                           id="kontrol-%s" % t, replace_existing=True, misfire_grace_time=3600, coalesce=True)
-    scheduler.add_job(ajanda_tick, CronTrigger(minute="*/30", hour="7-23", timezone=TZ), id="ajanda-mail",
-                      replace_existing=True, misfire_grace_time=900, coalesce=True)
+        # Ajanda ("EA:" mailleri) mail kontrolüyle aynı saatlerde güncellenir (2 saatte bir)
+        scheduler.add_job(ajanda_tick, CronTrigger(hour=hh, minute=mm, timezone=TZ), id="ajanda-%s" % t,
+                          replace_existing=True, misfire_grace_time=900, coalesce=True)
     scheduler.add_job(hatirlatma_tick, CronTrigger(minute="*/5", timezone=TZ), id="hatirlatma",
                       replace_existing=True, misfire_grace_time=300, coalesce=True)
     if not scheduler.running:
