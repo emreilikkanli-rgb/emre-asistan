@@ -13,12 +13,13 @@
     {% if c.refs and links[c.refs[0]|string] %}<a class="open" href="{{ links[c.refs[0]|string] }}" target="_blank" rel="noopener noreferrer">Outlook'ta aç ↗</a>{% endif %}
   </article>
 {% endmacro %}
-{# Özet panodaki tek satır: konunun tüm bilgisi burada, sayfada başka yerde tekrar edilmez #}
-{% macro satir(c, links, rid) %}
-  {% set ref = (c.refs or [])[0] %}
-  {% set oku = (ref is not none) and links[ref|string] %}
-  <li class="p-item">
-    {% if oku %}<a class="p-row" href="/mail/{{ rid }}/{{ ref }}">{% else %}<div class="p-row">{% endif %}
+{# Özet panodaki tek satır: konunun tüm bilgisi burada; altında Okudum / Takibe devam / Gerek yok #}
+{% macro satir(c, links, rid, takipte=False) %}
+  {% set rid2 = c._rid or rid %}
+  {% set ref = c._ref if c._ref is not none else (c.refs or [None])[0] %}
+  {% set oku = (ref is not none) and (takipte or links[ref|string]) %}
+  <li class="p-item" data-rid="{{ rid2 }}" data-ref="{{ ref }}">
+    {% if oku %}<a class="p-row" href="/mail/{{ rid2 }}/{{ ref }}">{% else %}<div class="p-row">{% endif %}
     <span class="p-main">
       <b>{{ c.baslik }}</b>
       <span class="p-meta">{% if c._aksiyon %}<span class="p-badge">Sizden bekleniyor</span>{% endif %}{{ c.kim }}{% if c.kim and c.zaman %} · {% endif %}{{ c.zaman }}</span>
@@ -28,12 +29,19 @@
       <span class="p-tags">{% for k in c.kisiler or [] %}<span class="kisi">{{ k }}</span>{% endfor %}{% for t in c.etiketler or [] %}<span class="{{ 'son' if 'son tarih' in t|lower }}">{{ t }}</span>{% endfor %}</span>
     </span>
     {% if oku %}<span class="p-go">Maili oku ›</span></a>{% else %}</div>{% endif %}
-    {% if (c.refs or [])|length > 1 %}<span class="p-ek">{% for x in c.refs[1:4] %}{% if links[x|string] %}<a href="/mail/{{ rid }}/{{ x }}">{{ loop.index + 1 }}. mail</a>{% endif %}{% endfor %}</span>{% endif %}
+    {% if not takipte and (c.refs or [])|length > 1 %}<span class="p-ek">{% for x in c.refs[1:4] %}{% if links[x|string] %}<a href="/mail/{{ rid }}/{{ x }}">{{ loop.index + 1 }}. mail</a>{% endif %}{% endfor %}</span>{% endif %}
+    {% if ref is not none %}
+    <span class="karar">
+      <button type="button" class="k-btn ok" data-karar="okundu">✓ Okudum</button>
+      {% if not takipte %}<button type="button" class="k-btn takip" data-karar="takip">📌 Takibe devam</button>{% endif %}
+      <button type="button" class="k-btn yok" data-karar="gereksiz">✕ Gerek yok</button>
+    </span>
+    {% endif %}
   </li>
 {% endmacro %}
 
 {# Bir ana başlığın mail listesi: ikona dokununca ikon ızgarasının altında açılır #}
-{% macro pano(pid, baslik, aciklama, renk, kartlar, links, rid, bos, alt='') %}
+{% macro pano(pid, baslik, aciklama, renk, kartlar, links, rid, bos, alt='', takipte=False) %}
   <section class="p-card m-panel" id="{{ pid }}" hidden style="--c: var(--{{ renk }}); --cbg: var(--{{ renk }}-bg)" aria-label="{{ baslik }}">
     <header class="p-head">
       <span class="p-baslik"><b>{{ baslik }}</b><small>{{ aciklama }}</small></span>
@@ -41,8 +49,8 @@
       <button class="p-kapat" type="button" data-kapat aria-label="Kapat">✕</button>
     </header>
     {% if kartlar %}
-      <ul class="p-list">{% for c in kartlar %}{{ satir(c, links, rid) }}{% endfor %}</ul>
-    {% else %}<p class="p-bos">{{ bos }}</p>{% endif %}
+      <ul class="p-list">{% for c in kartlar %}{{ satir(c, links, rid, takipte) }}{% endfor %}</ul>
+    {% else %}<ul class="p-list"></ul><p class="p-bos">{{ bos }}</p>{% endif %}
     {% if alt %}<p class="p-alt">{{ alt }}</p>{% endif %}
   </section>
 {% endmacro %}

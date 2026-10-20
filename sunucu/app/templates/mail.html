@@ -2,7 +2,7 @@
 {% block body %}
 {% set aktif = 'rapor' %}{% include "_nav.html" %}
 <p class="hub-sub" style="margin:0 0 4px">Emre'nin Mailleri</p>
-<p><a href="/rapor/{{ rid }}">← Rapora dön</a></p>
+<p><a href="/mailler">← Maillere dön</a></p>
 {% if hata %}<div class="note err">{{ hata }}</div>
 {% else %}
 <article class="card">
@@ -15,8 +15,25 @@
     {% if m.attachments %}<tr><td>Ekler</td><td>{{ m.attachments | join(' · ') }}</td></tr>{% endif %}
   </table>
   <pre class="mailbody">{{ m.body }}</pre>
+  <div class="karar karar-mail" data-rid="{{ rid }}" data-ref="{{ ref }}">
+    {% if karar %}<span class="k-durum">{{ {'okundu': '✓ Okudum olarak işaretli', 'takip': '📌 Takibinizde', 'gereksiz': '✕ Gerek yok olarak işaretli'}[karar] }}</span>{% endif %}
+    {% if karar != 'okundu' %}<button type="button" class="k-btn ok" data-karar="okundu">✓ Okudum</button>{% endif %}
+    {% if karar != 'takip' %}<button type="button" class="k-btn takip" data-karar="takip">📌 Takibe devam</button>{% endif %}
+    {% if karar != 'gereksiz' %}<button type="button" class="k-btn yok" data-karar="gereksiz">✕ Gerek yok</button>{% endif %}
+    {% if karar %}<button type="button" class="k-btn" data-karar="geri">Geri al</button>{% endif %}
+  </div>
   <div class="row"><a class="open" href="{{ m.owa }}" target="_blank" rel="noopener noreferrer">Outlook'ta aç ↗</a></div>
   <p class="muted" style="font-size:12px">Mail salt okunur gösterildi; okundu olarak işaretlenmedi. Cevap vermek ve ekleri açmak için Outlook'u kullanın.</p>
 </article>
+<script>
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-karar]'); if (!b) return;
+    var k = b.closest('.karar'); k.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
+    fetch('/api/mail-karar', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF': '{{ csrf }}' },
+      body: JSON.stringify({ rid: k.dataset.rid, ref: k.dataset.ref, durum: b.dataset.karar }) })
+      .then(function (r) { if (!r.ok) throw new Error(); location.href = b.dataset.karar === 'geri' ? location.href : '/mailler' + (b.dataset.karar === 'takip' ? '#p-takipte' : ''); })
+      .catch(function () { k.querySelectorAll('button').forEach(function (x) { x.disabled = false; }); alert('Kaydedilemedi, bağlantınızı kontrol edin.'); });
+  });
+</script>
 {% endif %}
 {% endblock %}

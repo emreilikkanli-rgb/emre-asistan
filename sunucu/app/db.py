@@ -45,6 +45,8 @@ def init():
             updated_at TEXT NOT NULL, PRIMARY KEY (collection, id));
         CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, body TEXT NOT NULL, created_at TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS kimlik (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS mail_karar (anahtar TEXT PRIMARY KEY, durum TEXT NOT NULL, at TEXT NOT NULL,
+            rid INTEGER, ref TEXT, kart TEXT NOT NULL);
         """)
         cols = [r[1] for r in c.execute("PRAGMA table_info(sessions)")]
         if "kalici" not in cols:  # "Beni hatırla" oturumları
@@ -211,3 +213,28 @@ def kimlik_set(key, value):
 def kimlik_del(key):
     with _lock, _conn() as c:
         c.execute("DELETE FROM kimlik WHERE key=?", (key,))
+
+
+# Emre Bey'in mail kararları: okundu (listeden kalkar), takip (Takiptekiler'de kalır), gereksiz (kalkar + öğrenme örneği)
+def karar_set(anahtar, durum, rid, ref, kart):
+    with _lock, _conn() as c:
+        c.execute("INSERT INTO mail_karar(anahtar, durum, at, rid, ref, kart) VALUES(?,?,?,?,?,?) "
+                  "ON CONFLICT(anahtar) DO UPDATE SET durum=excluded.durum, at=excluded.at, rid=excluded.rid, ref=excluded.ref, kart=excluded.kart",
+                  (anahtar, durum, datetime.now(timezone.utc).isoformat(), rid, str(ref), json.dumps(kart, ensure_ascii=False)))
+
+
+def karar_sil(anahtar):
+    with _lock, _conn() as c:
+        c.execute("DELETE FROM mail_karar WHERE anahtar=?", (anahtar,))
+
+
+def karar_hepsi():
+    with _conn() as c:
+        return {r["anahtar"]: dict(r, kart=json.loads(r["kart"])) for r in c.execute("SELECT * FROM mail_karar")}
+
+
+def karar_liste(durum, limit=50, gun=90):
+    with _conn() as c:
+        rows = c.execute("SELECT * FROM mail_karar WHERE durum=? AND at >= datetime('now', ?) ORDER BY at DESC LIMIT ?",
+                         (durum, "-%d days" % gun, limit)).fetchall()
+    return [dict(r, kart=json.loads(r["kart"])) for r in rows]

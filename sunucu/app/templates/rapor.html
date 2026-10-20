@@ -25,6 +25,7 @@
 {% if d.bildirim %}<div class="note">{{ d.bildirim }}</div>{% endif %}
 
 {% set bolumler = [
+  ('p-takipte', 'takipte', 'Takibimdeki', 'Mailler', "Takibe devam dediğiniz mailler; Okudum diyene kadar burada kalır", 'blue', p.takipte, 'Takibinizde mail yok. Bir mailde "Takibe devam"a basınca buraya gelir.'),
   ('p-vip', 'vip', 'Önemli', 'Kişiler', 'Öncelikli kişilerin yazdığı ya da karıştığı konular', 'violet', p.vip, 'Öncelikli kişilerden önemli gelişme yok.'),
   ('p-takip', 'takip', 'Takip', 'Edilecekler', "Sizden cevap bekleyenler ve CC'de süren işler", 'amber', p.takip, 'Takip gerektiren mail yok.'),
   ('p-ortak', 'tartisma', 'Karşılıklı', 'Tartışmalar', 'Ortak adreslerde itiraz, ceza, no-show ve gerginlikler', 'teal', p.ortak, 'Ortak maillerde öne çıkan tartışma yok.'),
@@ -34,7 +35,7 @@
 <nav class="m-ikonlar" aria-label="Ana başlıklar">
   {% for pid, slug, ust, ad, aciklama, renk, kartlar, bos in bolumler %}
   <button class="uygulama {{ 'bos' if not kartlar }}" type="button" data-hedef="{{ pid }}" aria-controls="{{ pid }}" aria-expanded="false" style="--sira: {{ loop.index0 }}">
-    <span class="kap">{{ ikon(slug) }}{% if kartlar %}<span class="rozet">{{ kartlar|length }}</span>{% endif %}</span>
+    <span class="kap">{{ ikon(slug) }}<span class="rozet" {{ '' if kartlar else 'hidden' }}>{{ kartlar|length }}</span></span>
     <span class="etiket"><small>{{ ust }}</small>{{ ad }}</span>
   </button>
   {% endfor %}
@@ -42,7 +43,8 @@
 <div class="m-paneller">
   {% for pid, slug, ust, ad, aciklama, renk, kartlar, bos in bolumler %}
   {{ pano(pid, ust ~ ' ' ~ ad|lower if ust != 'Önemli' else 'Önemli kişiler', aciklama, renk, kartlar, links, r.id, bos,
-          ((d.maili_olmayan_oncelikliler | join(' · ')) ~ ': bu dönemde mail yok.') if (slug == 'vip' and d.maili_olmayan_oncelikliler) else '') }}
+          ((d.maili_olmayan_oncelikliler | join(' · ')) ~ ': bu dönemde mail yok.') if (slug == 'vip' and d.maili_olmayan_oncelikliler) else '',
+          slug == 'takipte') }}
   {% endfor %}
 </div>
 
@@ -92,9 +94,62 @@
           else izle();
         }).catch(function () {});
     }
-    if (kutu.classList.contains('on')) izle();
-    document.addEventListener('visibilitychange', function () { if (!document.hidden) iste(); });
-    window.addEventListener('pageshow', function (e) { if (e.persisted) iste(); });
+    // Mailler yalnızca sayfa yenilenince ya da dışarıdan (ana ekran, bağlantı) açılınca kontrol edilir;
+    // bir maili okuyup geri dönünce ya da tarayıcının geri tuşuyla gelince kontrol (ve API ücreti) yok.
+    var nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
+    var oku = document.referrer.indexOf(location.origin + '/mail/') === 0;
+    if (nav.type === 'reload' || (nav.type === 'navigate' && !oku)) iste();
+    else if (kutu.classList.contains('on')) izle();
+  })();
+  // Okudum / Takibe devam / Gerek yok: satır listeden kalkar, "Geri al" ile geri gelir
+  (function () {
+    var csrf = '{{ csrf }}', toast = null, toastZaman = null;
+    function rozetGuncelle(panel) {
+      var n = panel.querySelectorAll('.p-list > li').length;
+      panel.querySelector('.p-say').textContent = n;
+      var bos = panel.querySelector('.p-bos'); if (bos) bos.hidden = n > 0;
+      var b = document.querySelector('[data-hedef="' + panel.id + '"]');
+      if (b) { var r = b.querySelector('.rozet'); r.textContent = n; r.hidden = n === 0; b.classList.toggle('bos', n === 0); }
+    }
+    function gonder(rid, ref, durum) {
+      return fetch('/api/mail-karar', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF': csrf },
+        body: JSON.stringify({ rid: rid, ref: ref, durum: durum }) }).then(function (r) { if (!r.ok) throw new Error(); });
+    }
+    function bildir(metin, geriAl) {
+      if (!toast) { toast = document.createElement('div'); toast.className = 'toast'; document.body.appendChild(toast); }
+      toast.innerHTML = '<span></span>' + (geriAl ? '<button type="button">Geri al</button>' : '');
+      toast.querySelector('span').textContent = metin; toast.classList.add('on');
+      if (geriAl) toast.querySelector('button').onclick = function () { toast.classList.remove('on'); geriAl(); };
+      clearTimeout(toastZaman); toastZaman = setTimeout(function () { toast.classList.remove('on'); }, 6000);
+    }
+    var etiket = { okundu: 'Okundu, listeden kaldırıldı.', takip: 'Takibimdeki Mailler\'e eklendi.', gereksiz: 'Kaldırıldı; benzerlerini artık daha az getireceğim.' };
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-karar]'); if (!btn) return;
+      var li = btn.closest('li'), panel = li.closest('.m-panel'), durum = btn.dataset.karar;
+      var yer = { ust: li.parentNode, sonraki: li.nextSibling };
+      btn.disabled = true;
+      gonder(li.dataset.rid, li.dataset.ref, durum).then(function () {
+        li.classList.add('gidiyor');
+        setTimeout(function () {
+          li.remove(); rozetGuncelle(panel);
+          var kopya = null;
+          if (durum === 'takip') {
+            var tp = document.getElementById('p-takipte');
+            kopya = li.cloneNode(true); kopya.classList.remove('gidiyor');
+            kopya.querySelectorAll('[data-karar="takip"]').forEach(function (x) { x.remove(); });
+            kopya.querySelectorAll('button').forEach(function (x) { x.disabled = false; });
+            tp.querySelector('.p-list').prepend(kopya); rozetGuncelle(tp);
+          }
+          bildir(etiket[durum], function () {
+            gonder(li.dataset.rid, li.dataset.ref, panel.id === 'p-takipte' ? 'takip' : 'geri').then(function () {
+              if (kopya) { var tp2 = kopya.closest('.m-panel'); kopya.remove(); rozetGuncelle(tp2); }
+              li.classList.remove('gidiyor'); btn.disabled = false;
+              yer.ust.insertBefore(li, yer.sonraki && yer.sonraki.parentNode === yer.ust ? yer.sonraki : null); rozetGuncelle(panel);
+            });
+          });
+        }, 220);
+      }).catch(function () { btn.disabled = false; bildir('Kaydedilemedi, bağlantınızı kontrol edin.'); });
+    });
   })();
   // Ana başlık ikonları: dokununca o başlığın mailleri ızgaranın altında açılır, yeniden dokununca kapanır
   (function () {

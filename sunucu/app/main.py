@@ -1,4 +1,5 @@
 """Emre'nin Asistanı: mail raporları web uygulaması (Railway)."""
+import hashlib
 import hmac
 import html as _html
 import logging
@@ -252,8 +253,67 @@ def modul(request: Request, slug: str):
     return _page(request, "modul.html", sid, m=m)
 
 
+def _mail_kimligi(r, ref):
+    """Rapordaki mail numarasından Exchange kimliğini bulur."""
+    data = (r or {}).get("data") or {}
+    item_id = (data.get("_ids") or {}).get(str(ref))
+    if not item_id:  # eski raporlar: kimliği Outlook bağlantısından çıkar
+        link = (data.get("_links") or {}).get(str(ref), "")
+        item_id = (parse_qs(urlparse(link).query).get("ItemID") or [None])[0]
+    return item_id
+
+
+def _anahtar(item_id):
+    return hashlib.sha1(item_id.encode()).hexdigest()[:24] if item_id else ""
+
+
 def _pano(r):
-    return tekillestir(r["data"]) if r and r.get("status") == "ok" and isinstance(r.get("data"), dict) else {}
+    """Tekrarsız pano + Emre Bey'in kararları: okundu/gereksiz olanlar listeden kalkar, takiptekiler ayrı başlıkta."""
+    if not (r and r.get("status") == "ok" and isinstance(r.get("data"), dict)):
+        return {}
+    p = tekillestir(r["data"])
+    kararlar = db.karar_hepsi()
+    for bolum in ("sikayet", "odeme", "vip", "ortak", "takip"):
+        kalan = []
+        for c in p.get(bolum, []):
+            ref = (c.get("refs") or [None])[0]
+            a = _anahtar(_mail_kimligi(r, ref)) if ref is not None else ""
+            c["_ref"], c["_rid"] = ref, r["id"]
+            if a and a in kararlar:
+                continue  # okundu, gereksiz ya da Takiptekiler'de
+            kalan.append(c)
+        p[bolum] = kalan
+    p["takipte"] = [dict(k["kart"], _ref=k["ref"], _rid=k["rid"], _takip_at=k["at"]) for k in db.karar_liste("takip", limit=200, gun=3650)]
+    return p
+
+
+@app.post("/api/mail-karar")
+async def mail_karar(request: Request):
+    """Okudum / Takibe devam / Gerek yok / Geri al. Yalnızca oturum + CSRF ile."""
+    _, err = _api_guard(request, write=True)
+    if err:
+        return err
+    try:
+        body = await request.json()
+        rid, ref, durum = int(body.get("rid")), str(body.get("ref")), str(body.get("durum"))
+    except (ValueError, TypeError):
+        return PlainTextResponse("Geçersiz istek", status_code=400)
+    if durum not in ("okundu", "takip", "gereksiz", "geri"):
+        return PlainTextResponse("Geçersiz karar", status_code=400)
+    r = db.get_report(rid)
+    a = _anahtar(_mail_kimligi(r, ref))
+    if not a:
+        return PlainTextResponse("Mail bulunamadı", status_code=404)
+    if durum == "geri":
+        db.karar_sil(a)
+        return {"ok": True}
+    kart = next((c for sec in ("sikayetler", "odeme", "oncelikli", "ortak", "aksiyon", "takip")
+                 for c in (r["data"].get(sec) or []) if [str(x) for x in (c.get("refs") or [])][:1] == [ref]), None)
+    if kart is None:
+        kart = next((dict(k["kart"]) for k in db.karar_hepsi().values() if str(k["ref"]) == ref and k["rid"] == rid), {"baslik": "Mail"})
+    ozet = {k: kart.get(k) for k in ("baslik", "kim", "zaman", "ozet", "satir_etiketi", "satir", "etiketler", "kisiler", "refs")}
+    db.karar_set(a, durum, rid, ref, ozet)
+    return {"ok": True}
 
 
 @app.get("/mailler", response_class=HTMLResponse)
@@ -261,8 +321,8 @@ def mailler(request: Request):
     sid, redir = _guard(request)
     if redir:
         return redir
-    durum = jobs.guncelle_baslat()
     r = db.get_report()
+    durum = jobs.guncelle_baslat() if not r else ("calisiyor" if jobs.calisiyor() else "guncel")
     return _page(request, "rapor.html", sid, r=r, p=_pano(r), son=db.list_reports(1), gun=ajanda_mod.today_summary(),
                  guncelleniyor=durum in ("basladi", "calisiyor"))
 
@@ -580,12 +640,8 @@ def mail_oku(request: Request, rid: int, ref: str):
     if redir:
         return redir
     r = db.get_report(rid)
-    item_id = None
-    if r:
-        item_id = (r["data"].get("_ids") or {}).get(ref)
-        if not item_id:  # eski raporlar: kimliği Outlook bağlantısından çıkar
-            link = (r["data"].get("_links") or {}).get(ref, "")
-            item_id = (parse_qs(urlparse(link).query).get("ItemID") or [None])[0]
+    item_id = _mail_kimligi(r, ref) if r else None
+    karar = db.karar_hepsi().get(_anahtar(item_id)) if item_id else None
     m, hata = None, None
     if not item_id:
         hata = "Bu mail bulunamadı."
@@ -599,4 +655,4 @@ def mail_oku(request: Request, rid: int, ref: str):
                 m["owa"] = ews.owa_link(item_id)
         except EwsError as e:
             hata = str(e)
-    return _page(request, "mail.html", sid, m=m, hata=hata, rid=rid)
+    return _page(request, "mail.html", sid, m=m, hata=hata, rid=rid, ref=ref, karar=(karar or {}).get("durum", ""))
