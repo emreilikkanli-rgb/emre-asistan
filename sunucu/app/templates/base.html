@@ -229,6 +229,31 @@
   @media (prefers-reduced-motion: reduce) { .uygulama, .nabiz, .m-panel { animation: none; } }
   .m-ikonlar { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   @media (max-width: 520px) { .m-ikonlar { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 8px; } }
+  /* Kıbrıs Etkinlikleri */
+  .e-ikonlar { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .e-liste { list-style: none; margin: 0; padding: 0; }
+  .e-liste li + li { border-top: 1px solid var(--line); }
+  .e-kart { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 14px; padding: 14px 18px; }
+  .e-tarih { display: grid; justify-items: center; align-content: start; padding: 8px 4px; border-radius: 14px; background: var(--cbg); border: 1px solid var(--line); text-align: center; }
+  .e-tarih b { font-size: 24px; line-height: 1; color: var(--c); font-variant-numeric: tabular-nums; }
+  .e-tarih span { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #e9e6ff; }
+  .e-tarih small { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .e-govde { display: grid; gap: 4px; min-width: 0; }
+  .e-ad { font-size: 15px; overflow-wrap: anywhere; }
+  .e-sanatci { font-size: 14px; color: #d9d2ff; font-weight: 600; }
+  .e-yer, .e-aciklama { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+  .e-aciklama { color: #d6d2ee; }
+  .e-etiketler { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .e-etiketler > span { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--gray-bg); color: #e6e3fb; }
+  .e-ucret.ucretsiz { background: rgba(110,231,183,.15) !important; color: #9ff0cf !important; }
+  .e-ucret.ucretli { background: var(--orange-bg) !important; color: var(--orange) !important; }
+  .e-ucret.bilinmiyor { color: var(--muted) !important; }
+  .e-kaynak { font-size: 12.5px; font-weight: 600; color: var(--blue); text-decoration: none; margin-top: 2px; }
+  .e-kaynak:hover { text-decoration: underline; }
+  .e-donem { margin: 0; padding: 12px 18px 4px; font-size: 14px; color: #f1efff; border-top: 1px solid var(--line); }
+  .e-donem:first-of-type { border-top: 0; }
+  .e-donem small { font-weight: 500; color: var(--muted); margin-left: 6px; }
+  @media (max-width: 520px) { .e-kart { grid-template-columns: 50px minmax(0, 1fr); gap: 10px; padding: 12px 14px; } }
   .karar-mail { padding: 4px 0 12px; align-items: center; }
   .k-durum { font-size: 13px; font-weight: 600; color: var(--muted); margin-right: 4px; }
   .karar { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 18px 12px; }

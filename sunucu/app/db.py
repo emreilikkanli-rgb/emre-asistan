@@ -45,6 +45,8 @@ def init():
             updated_at TEXT NOT NULL, PRIMARY KEY (collection, id));
         CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, body TEXT NOT NULL, created_at TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS kimlik (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS etkinlik_rapor (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL,
+            status TEXT NOT NULL, error TEXT, data TEXT, cost REAL DEFAULT 0);
         CREATE TABLE IF NOT EXISTS mail_karar (anahtar TEXT PRIMARY KEY, durum TEXT NOT NULL, at TEXT NOT NULL,
             rid INTEGER, ref TEXT, kart TEXT NOT NULL);
         """)
@@ -101,9 +103,11 @@ def list_reports(limit=60):
 
 
 def month_cost():
+    """Bu ayki toplam Claude API harcaması: mail raporları + etkinlik aramaları."""
     start = datetime.now(timezone.utc).strftime("%Y-%m-01")
     with _conn() as c:
-        return c.execute("SELECT COALESCE(SUM(cost), 0) FROM reports WHERE created_at >= ?", (start,)).fetchone()[0]
+        return c.execute("SELECT (SELECT COALESCE(SUM(cost), 0) FROM reports WHERE created_at >= ?) + "
+                         "(SELECT COALESCE(SUM(cost), 0) FROM etkinlik_rapor WHERE created_at >= ?)", (start, start)).fetchone()[0]
 
 
 def prune_reports(keep_days=90):
@@ -238,3 +242,21 @@ def karar_liste(durum, limit=50, gun=90):
         rows = c.execute("SELECT * FROM mail_karar WHERE durum=? AND at >= datetime('now', ?) ORDER BY at DESC LIMIT ?",
                          (durum, "-%d days" % gun, limit)).fetchall()
     return [dict(r, kart=json.loads(r["kart"])) for r in rows]
+
+
+# Kıbrıs etkinlik taramaları
+def etkinlik_ekle(status, data=None, hata=None, maliyet=0):
+    with _lock, _conn() as c:
+        c.execute("INSERT INTO etkinlik_rapor(created_at, status, error, data, cost) VALUES(?,?,?,?,?)",
+                  (datetime.now(timezone.utc).isoformat(), status, hata, json.dumps(data or {}, ensure_ascii=False), maliyet))
+        c.execute("DELETE FROM etkinlik_rapor WHERE created_at < datetime('now', '-120 days')")
+
+
+def etkinlik_son(sadece_ok=True):
+    with _conn() as c:
+        r = c.execute("SELECT * FROM etkinlik_rapor %s ORDER BY id DESC LIMIT 1" % ("WHERE status='ok'" if sadece_ok else "")).fetchone()
+    if not r:
+        return None
+    d = dict(r)
+    d["data"] = json.loads(d["data"] or "{}")
+    return d

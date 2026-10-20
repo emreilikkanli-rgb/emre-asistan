@@ -13,6 +13,8 @@ MODULLER = [
      "aciklama": "Önemli kişiler, takip, tartışmalar, şikâyetler ve ödeme mailleri."},
     {"slug": "is-planlama", "ust": "Emre'nin", "ad": "İş Planlaması", "grup": "is", "href": "/ajanda#gorevler", "hazir": True,
      "aciklama": "Ekibe verilen görevler, bitiş tarihleri, uzatmalar ve değerlendirmeler."},
+    {"slug": "kibris-etkinlik", "ust": "Kıbrıs", "ad": "Etkinlikleri", "grup": "is", "href": "/etkinlikler", "hazir": True,
+     "aciklama": "KKTC'de konser, tiyatro, festival, otel ve mekân etkinlikleri; tarih, saat, sanatçı ve ücret bilgisiyle."},
     {"slug": "tr-haberler", "ust": "Emre'nin", "ad": "TR Haberleri", "grup": "gundem", "hazir": False,
      "aciklama": "Türkiye ve KKTC gündeminden sizin için seçilmiş haberler.",
      "planlanan": ["Sabah ve akşam kısa gündem özeti", "Turizm, havacılık ve otelcilik haberleri öncelikli", "KKTC'den yerel gelişmeler"]},

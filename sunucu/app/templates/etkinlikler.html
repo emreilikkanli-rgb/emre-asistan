@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Kıbrıs Etkinlikleri · Emre'nin Asistanı{% endblock %}
+{% block body %}
+{% from "_ikonlar.html" import ikon %}
+{% set aktif = 'etkinlik' %}{% include "_nav.html" %}
+{% set AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'] %}
+{% set TUR = {'konser': '🎤 Konser', 'tiyatro': '🎭 Tiyatro', 'festival': '🎪 Festival', 'parti': '🎧 Parti', 'gala': '🥂 Gala', 'sergi': '🖼 Sergi',
+              'spor': '🏅 Spor', 'cocuk': '🧸 Çocuk', 'kultur': '🏛 Kültür', 'diger': '✨ Etkinlik'} %}
+
+{% macro kart(e) %}
+  {% set gun = e.tarih[8:10]|int %}{% set ay = AY[e.tarih[5:7]|int - 1] %}
+  <li class="e-kart">
+    <div class="e-tarih"><b>{{ gun }}</b><span>{{ ay }}</span>{% if e.bitis_tarihi and e.bitis_tarihi != e.tarih %}<small>→ {{ e.bitis_tarihi[8:10]|int }} {{ AY[e.bitis_tarihi[5:7]|int - 1] }}</small>{% endif %}</div>
+    <div class="e-govde">
+      <b class="e-ad">{{ e.ad }}</b>
+      {% if e.sanatci %}<span class="e-sanatci">{{ e.sanatci }}</span>{% endif %}
+      <span class="e-yer">📍 {{ e.mekan or 'Mekân belirtilmemiş' }}{% if e.sehir %} · {{ e.sehir }}{% endif %}</span>
+      <span class="e-etiketler">
+        <span class="e-saat">🕒 {% if e.baslangic_saati %}{{ e.baslangic_saati }}{% if e.bitis_saati %} – {{ e.bitis_saati }}{% endif %}{% else %}Saat belirtilmemiş{% endif %}</span>
+        <span class="e-ucret {{ e.ucret }}">{{ {'ucretsiz': 'Ücretsiz', 'ucretli': 'Ücretli', 'bilinmiyor': 'Ücret bilinmiyor'}[e.ucret] }}{% if e.ucret_detay %} · {{ e.ucret_detay }}{% endif %}</span>
+        <span class="e-tur">{{ TUR.get(e.tur, '✨ Etkinlik') }}</span>
+      </span>
+      {% if e.aciklama %}<span class="e-aciklama">{{ e.aciklama }}</span>{% endif %}
+      {% if e.kaynak_url %}<a class="e-kaynak" href="{{ e.kaynak_url }}" target="_blank" rel="noopener noreferrer">Kaynak: {{ e.kaynak_adi or 'sayfayı aç' }} ↗</a>{% endif %}
+    </div>
+  </li>
+{% endmacro %}
+
+<header>
+  <p class="hub-sub" style="margin:0 0 4px">Emre'nin Asistanı</p>
+  <h1>Kıbrıs Etkinlikleri</h1>
+  <p>KKTC'de konser, tiyatro, festival, otel ve mekân etkinlikleri ·
+    {% if son %}son tarama {{ son.created_at | uzun_tarih }}{% if son.data.kaynak_sayisi %} · {{ son.data.kaynak_sayisi }} kaynak{% endif %}{% else %}henüz tarama yok{% endif %}</p>
+  <div class="row" style="margin-top:12px">
+    <button class="btn primary" type="button" id="araDugme" {{ 'disabled' if araniyor }}>{{ 'Aranıyor…' if araniyor else '🔎 Şimdi ara' }}</button>
+  </div>
+</header>
+<div class="guncel {{ 'on' if araniyor }}" id="durum" role="status">{% if araniyor %}<span class="spin"></span>Etkinlikler web'de ve sosyal medya duyurularında aranıyor; 1–3 dakika sürebilir, sonuçlar gelince sayfa yenilenir.{% endif %}</div>
+{% if hata and not araniyor %}<div class="note err">{{ hata }}</div>{% endif %}
+
+{% set bolumler = [
+  ('e-yaklasan', 'yaklasan', 'Yaklaşan', 'Etkinlikler', "Önümüzdeki 14 gün", 'teal', g.yaklasan|length),
+  ('e-buay', 'bu-ay', 'Bu Ay', 'Etkinlikler', "Ay sonuna kadar", 'violet', g.bu_ay|length),
+  ('e-ozel', 'ozel-donem', 'Özel Dönem', 'Etkinlikleri', "Bayramlar, Christmas ve yılbaşı, özel günler", 'orange', g.ozel_sayi),
+] %}
+<nav class="m-ikonlar e-ikonlar" aria-label="Etkinlik başlıkları">
+  {% for pid, slug, ust, ad, aciklama, renk, sayi in bolumler %}
+  <button class="uygulama {{ 'bos' if not sayi }}" type="button" data-hedef="{{ pid }}" aria-controls="{{ pid }}" aria-expanded="false" style="--sira: {{ loop.index0 }}">
+    <span class="kap">{{ ikon(slug) }}<span class="rozet" {{ '' if sayi else 'hidden' }}>{{ sayi }}</span></span>
+    <span class="etiket"><small>{{ ust }}</small>{{ ad }}</span>
+  </button>
+  {% endfor %}
+</nav>
+
+<div class="m-paneller">
+  {% for pid, slug, ust, ad, aciklama, renk, sayi in bolumler %}
+  <section class="p-card m-panel" id="{{ pid }}" hidden style="--c: var(--{{ renk }}); --cbg: var(--{{ renk }}-bg)" aria-label="{{ ust }} {{ ad|lower }}">
+    <header class="p-head">
+      <span class="p-baslik"><b>{{ ust }} {{ ad|lower }}</b><small>{{ aciklama }}</small></span>
+      <span class="p-say">{{ sayi }}</span>
+      <button class="p-kapat" type="button" data-kapat aria-label="Kapat">✕</button>
+    </header>
+    {% if slug == 'ozel-donem' %}
+      {% for o in g.ozel %}
+        <h3 class="e-donem">{{ o.ad }} <small>{{ o.bas[8:10]|int }} {{ AY[o.bas[5:7]|int - 1] }}{% if o.bit != o.bas %} – {{ o.bit[8:10]|int }} {{ AY[o.bit[5:7]|int - 1] }}{% endif %}</small></h3>
+        {% if o.etkinlikler %}<ul class="e-liste">{% for e in o.etkinlikler %}{{ kart(e) }}{% endfor %}</ul>
+        {% else %}<p class="p-bos">Bu dönem için henüz duyurulmuş etkinlik bulunamadı.</p>{% endif %}
+      {% else %}<p class="p-bos">Önümüzdeki 90 günde özel dönem yok.</p>{% endfor %}
+    {% else %}
+      {% set liste = g.yaklasan if slug == 'yaklasan' else g.bu_ay %}
+      {% if liste %}<ul class="e-liste">{% for e in liste %}{{ kart(e) }}{% endfor %}</ul>
+      {% else %}<p class="p-bos">{{ 'Henüz tarama yapılmadı; "Şimdi ara"ya basın.' if not son else 'Bu dönemde etkinlik bulunamadı.' }}</p>{% endif %}
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
+
+{% if son and son.data.not %}<p class="quiet" style="margin-top:14px">Not: {{ son.data.not }}</p>{% endif %}
+<footer>Etkinlikler web'deki duyurulardan Claude tarafından derlenir; tarih, saat ve ücreti kaynağından teyit edin. Sayfa en sık günde bir kez kendiliğinden aranır; "Şimdi ara" ile yeniler (en sık 30 dakikada bir).{% if son %} Son tarama: ${{ '%.3f' % son.cost }}.{% endif %}</footer>
+
+<script>
+  (function () {
+    var dugmeler = document.querySelectorAll('.e-ikonlar [data-hedef]');
+    function goster(pid, kaydir) {
+      dugmeler.forEach(function (b) { var acik = b.dataset.hedef === pid; b.setAttribute('aria-expanded', String(acik)); document.getElementById(b.dataset.hedef).hidden = !acik; });
+      if (pid && kaydir) document.getElementById(pid).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    dugmeler.forEach(function (b) { b.addEventListener('click', function () { goster(b.getAttribute('aria-expanded') === 'true' ? '' : b.dataset.hedef, true); }); });
+    document.querySelectorAll('[data-kapat]').forEach(function (k) { k.addEventListener('click', function () { goster('', false); }); });
+    if (location.hash && document.getElementById(location.hash.slice(1))) goster(location.hash.slice(1), true);
+
+    var durum = document.getElementById('durum'), dugme = document.getElementById('araDugme'), zaman = null;
+    var ilkId = {{ (son or {}).get('id', 0) }}, csrf = '{{ csrf }}';
+    function izle() {
+      clearTimeout(zaman);
+      fetch('/api/etkinlik-durum', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.id && d.id !== ilkId) { location.replace('/etkinlikler'); return; }
+        if (d.calisiyor) { zaman = setTimeout(izle, 5000); return; }
+        dugme.disabled = false; dugme.textContent = '🔎 Şimdi ara';
+        if (d.hata) { durum.className = 'guncel on hata'; durum.textContent = d.hata; } else { durum.className = 'guncel'; durum.textContent = ''; }
+      }).catch(function () { zaman = setTimeout(izle, 8000); });
+    }
+    dugme.addEventListener('click', function () {
+      dugme.disabled = true; dugme.textContent = 'Aranıyor…';
+      fetch('/api/etkinlik-ara', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF': csrf } }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.durum === 'guncel') { dugme.disabled = false; dugme.textContent = '🔎 Şimdi ara'; durum.className = 'guncel on'; durum.textContent = 'Son 30 dakika içinde arandı; liste güncel.'; return; }
+        durum.className = 'guncel on'; durum.innerHTML = '<span class="spin"></span>Etkinlikler aranıyor; 1–3 dakika sürebilir.'; izle();
+      }).catch(function () { dugme.disabled = false; dugme.textContent = '🔎 Şimdi ara'; });
+    });
+    if (durum.classList.contains('on')) izle();
+  })();
+</script>
+{% endblock %}

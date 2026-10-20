@@ -5,14 +5,14 @@ import html as _html
 import logging
 import os
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import ajanda as ajanda_mod, auth, db, ews_gonder, jobs, moduller
+from . import ajanda as ajanda_mod, auth, db, etkinlik, ews_gonder, jobs, moduller
 from .analyze import tekillestir
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -224,6 +224,8 @@ def ana(request: Request):
         "ajanda": len([i for i in gun["bugun"] if not i.get("done")]) + len(gun["geciken"]),
         "mailler": len(p.get("sikayet", [])) + len(p.get("odeme", [])) + len([c for c in p.get("takip", []) if c.get("_aksiyon")]),
         "is-planlama": len(gun["g_bugun"]) + len(gun["g_gec"]),
+        "kibris-etkinlik": len([e for e in (db.etkinlik_son() or {}).get("data", {}).get("etkinlikler", [])
+                                if simdi.date().isoformat() <= e["tarih"] <= (simdi.date() + timedelta(days=7)).isoformat()]),
     }
     parcalar = []
     if rozet["ajanda"]:
@@ -285,6 +287,37 @@ def _pano(r):
         p[bolum] = kalan
     p["takipte"] = [dict(k["kart"], _ref=k["ref"], _rid=k["rid"], _takip_at=k["at"]) for k in db.karar_liste("takip", limit=200, gun=3650)]
     return p
+
+
+# ---------- Kıbrıs Etkinlikleri ----------
+@app.get("/etkinlikler", response_class=HTMLResponse)
+def etkinlikler(request: Request):
+    sid, redir = _guard(request)
+    if redir:
+        return redir
+    durum = etkinlik.baslat(elle=False)  # son tarama 24 saatten eskiyse arka planda yenile
+    son, enson = db.etkinlik_son(), db.etkinlik_son(sadece_ok=False)
+    g = etkinlik.gruplar((son or {}).get("data", {}).get("etkinlikler", []))
+    return _page(request, "etkinlikler.html", sid, son=son, g=g, araniyor=durum in ("basladi", "calisiyor"),
+                 hata=(enson or {}).get("error") if enson and enson["status"] != "ok" else "")
+
+
+@app.get("/api/etkinlik-durum")
+def etkinlik_durum(request: Request):
+    _, err = _api_guard(request)
+    if err:
+        return err
+    son, enson = db.etkinlik_son(), db.etkinlik_son(sadece_ok=False)
+    return {"calisiyor": etkinlik.calisiyor(), "id": (son or {}).get("id", 0),
+            "hata": (enson or {}).get("error") or "" if enson and enson["status"] != "ok" else "", "son_id": (enson or {}).get("id", 0)}
+
+
+@app.post("/api/etkinlik-ara")
+def etkinlik_ara(request: Request):
+    _, err = _api_guard(request, write=True)
+    if err:
+        return err
+    return {"durum": etkinlik.baslat(elle=True)}
 
 
 @app.post("/api/mail-karar")
