@@ -9,7 +9,8 @@
 
 {% macro kart(e) %}
   {% set gun = e.tarih[8:10]|int %}{% set ay = AY[e.tarih[5:7]|int - 1] %}
-  <li class="e-kart">
+  <li class="e-kart {{ 'yeni' if e.yeni }}">
+    {% if e.yeni %}<span class="e-yeni">Yeni eklendi</span>{% endif %}
     <div class="e-tarih"><b>{{ gun }}</b><span>{{ ay }}</span>{% if e.bitis_tarihi and e.bitis_tarihi != e.tarih %}<small>→ {{ e.bitis_tarihi[8:10]|int }} {{ AY[e.bitis_tarihi[5:7]|int - 1] }}</small>{% endif %}</div>
     <div class="e-govde">
       <b class="e-ad">{{ e.ad }}</b>
@@ -35,7 +36,7 @@
     <button class="btn primary" type="button" id="araDugme" {{ 'disabled' if araniyor }}>{{ 'Aranıyor…' if araniyor else '🔎 Şimdi ara' }}</button>
   </div>
 </header>
-<div class="guncel {{ 'on' if araniyor }}" id="durum" role="status">{% if araniyor %}<span class="spin"></span>Etkinlikler web'de ve sosyal medya duyurularında aranıyor; 1–3 dakika sürebilir, sonuçlar gelince sayfa yenilenir.{% endif %}</div>
+<div class="guncel {{ 'on' if araniyor }}" id="durum" role="status">{% if araniyor %}<span class="spin"></span>{% if son %}Bugünün taraması arka planda yapılıyor; aşağıda son sonuçlar gösteriliyor.{% else %}Etkinlikler ilk kez aranıyor; 1–3 dakika sürebilir, sonuçlar gelince sayfa yenilenir.{% endif %}{% endif %}</div>
 {% if hata and not araniyor %}<div class="note err">{{ hata }}</div>{% endif %}
 
 {% set bolumler = [
@@ -51,6 +52,30 @@
   </button>
   {% endfor %}
 </nav>
+
+{% if son %}{% set oz = g.ozet %}
+<section class="e-ozet" aria-label="Özet rapor">
+  <div class="e-ozet-ust">
+    <b>Özet rapor</b>
+    <span>{{ son.created_at | uzun_tarih }} taraması</span>
+  </div>
+  <div class="e-sayilar">
+    <span class="{{ 'vurgu' if oz.yeni }}"><b>{{ oz.yeni|length }}</b> yeni eklenen</span>
+    <span><b>{{ oz.sayi_14 }}</b> etkinlik · 14 gün</span>
+    <span><b>{{ oz.ucretsiz_14 }}</b> ücretsiz</span>
+    <span><b>{{ oz.sayi_ay }}</b> bu ay</span>
+    <span><b>{{ oz.donem_sayi }}</b> özel dönemde program</span>
+  </div>
+  {% if oz.yeni %}
+  <p class="e-ozet-baslik">✨ Bugün yeni eklenenler</p>
+  <ul class="e-mini">{% for e in oz.yeni[:6] %}<li class="yeni"><span class="t">{{ e.tarih[8:10]|int }} {{ AY[e.tarih[5:7]|int - 1] }}{% if e.baslangic_saati %} · {{ e.baslangic_saati }}{% endif %}</span><span class="n"><b>{{ e.ad }}</b>{% if e.sanatci %} — {{ e.sanatci }}{% endif %}</span><small>{{ e.mekan }}{% if e.sehir %}, {{ e.sehir }}{% endif %} · {{ {'ucretsiz': 'Ücretsiz', 'ucretli': 'Ücretli', 'bilinmiyor': 'Ücret ?'}[e.ucret] }}</small></li>{% endfor %}</ul>
+  {% endif %}
+  {% if oz.hafta %}
+  <p class="e-ozet-baslik">📌 Bu hafta öne çıkanlar</p>
+  <ul class="e-mini">{% for e in oz.hafta %}<li class="{{ 'yeni' if e.yeni }}"><span class="t">{{ e.tarih[8:10]|int }} {{ AY[e.tarih[5:7]|int - 1] }}{% if e.baslangic_saati %} · {{ e.baslangic_saati }}{% endif %}</span><span class="n">{% if e.yeni %}<b>{{ e.ad }}</b>{% else %}{{ e.ad }}{% endif %}{% if e.sanatci %} — {{ e.sanatci }}{% endif %}</span><small>{{ e.mekan }}{% if e.sehir %}, {{ e.sehir }}{% endif %} · {{ {'ucretsiz': 'Ücretsiz', 'ucretli': 'Ücretli', 'bilinmiyor': 'Ücret ?'}[e.ucret] }}</small></li>{% endfor %}</ul>
+  {% elif not oz.yeni %}<p class="p-bos" style="padding:8px 0 0">Bu hafta için duyurulmuş etkinlik bulunamadı.</p>{% endif %}
+</section>
+{% endif %}
 
 <div class="m-paneller">
   {% for pid, slug, ust, ad, aciklama, renk, sayi in bolumler %}
@@ -76,7 +101,7 @@
 </div>
 
 {% if son and son.data.not %}<p class="quiet" style="margin-top:14px">Not: {{ son.data.not }}</p>{% endif %}
-<footer>Etkinlikler web'deki duyurulardan Claude tarafından derlenir; tarih, saat ve ücreti kaynağından teyit edin. Sayfa en sık günde bir kez kendiliğinden aranır; "Şimdi ara" ile yeniler (en sık 30 dakikada bir).{% if son %} Son tarama: ${{ '%.3f' % son.cost }}.{% endif %}</footer>
+<footer>Etkinlikler web'deki duyurulardan Claude tarafından derlenir; tarih, saat ve ücreti kaynağından teyit edin. Tarama günde bir kez, sabah uygulamayı ilk açtığınızda arka planda yapılır; "Şimdi ara" ile elle yenilenir (en sık 30 dakikada bir). "Yeni eklendi": önceki günlerin taramalarında olmayan etkinlik.{% if son %} Son tarama: ${{ '%.3f' % son.cost }}.{% endif %}</footer>
 
 <script>
   (function () {
@@ -94,7 +119,12 @@
     function izle() {
       clearTimeout(zaman);
       fetch('/api/etkinlik-durum', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
-        if (d.id && d.id !== ilkId) { location.replace('/etkinlikler'); return; }
+        if (d.id && d.id !== ilkId) {
+          if (!ilkId) { location.replace('/etkinlikler'); return; }  // ilk tarama: sonuçları hemen göster
+          dugme.disabled = false; dugme.textContent = '🔎 Şimdi ara';
+          durum.className = 'guncel on'; durum.innerHTML = 'Bugünün taraması tamamlandı. <button type="button" class="btn primary" style="margin-left:auto" onclick="location.replace(\'/etkinlikler\')">Yeni sonuçları göster</button>';
+          return;
+        }
         if (d.calisiyor) { zaman = setTimeout(izle, 5000); return; }
         dugme.disabled = false; dugme.textContent = '🔎 Şimdi ara';
         if (d.hata) { durum.className = 'guncel on hata'; durum.textContent = d.hata; } else { durum.className = 'guncel'; durum.textContent = ''; }
@@ -104,7 +134,7 @@
       dugme.disabled = true; dugme.textContent = 'Aranıyor…';
       fetch('/api/etkinlik-ara', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF': csrf } }).then(function (r) { return r.json(); }).then(function (d) {
         if (d.durum === 'guncel') { dugme.disabled = false; dugme.textContent = '🔎 Şimdi ara'; durum.className = 'guncel on'; durum.textContent = 'Son 30 dakika içinde arandı; liste güncel.'; return; }
-        durum.className = 'guncel on'; durum.innerHTML = '<span class="spin"></span>Etkinlikler aranıyor; 1–3 dakika sürebilir.'; izle();
+        durum.className = 'guncel on'; durum.innerHTML = '<span class="spin"></span>Etkinlikler arka planda aranıyor; mevcut sonuçlar gösterilmeye devam ediyor.'; izle();
       }).catch(function () { dugme.disabled = false; dugme.textContent = '🔎 Şimdi ara'; });
     });
     if (durum.classList.contains('on')) izle();

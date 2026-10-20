@@ -47,6 +47,7 @@ def init():
         CREATE TABLE IF NOT EXISTS kimlik (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS etkinlik_rapor (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL,
             status TEXT NOT NULL, error TEXT, data TEXT, cost REAL DEFAULT 0);
+        CREATE TABLE IF NOT EXISTS etkinlik_gorulen (anahtar TEXT PRIMARY KEY, ilk TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS mail_karar (anahtar TEXT PRIMARY KEY, durum TEXT NOT NULL, at TEXT NOT NULL,
             rid INTEGER, ref TEXT, kart TEXT NOT NULL);
         """)
@@ -260,3 +261,15 @@ def etkinlik_son(sadece_ok=True):
     d = dict(r)
     d["data"] = json.loads(d["data"] or "{}")
     return d
+
+
+def etkinlik_gorulen_isle(anahtarlar, bugun):
+    """Etkinliklerin ilk görüldüğü günü kaydeder. Dönüş: ({anahtar: ilk gün}, önceki günlerden kayıt var mı)."""
+    with _lock, _conn() as c:
+        onceki = c.execute("SELECT COUNT(*) FROM etkinlik_gorulen WHERE ilk < ?", (bugun,)).fetchone()[0] > 0
+        for a in anahtarlar:
+            c.execute("INSERT OR IGNORE INTO etkinlik_gorulen(anahtar, ilk) VALUES(?, ?)", (a, bugun))
+        c.execute("DELETE FROM etkinlik_gorulen WHERE ilk < date('now', '-200 days')")
+        q = ",".join("?" * len(anahtarlar))
+        ilk = dict(c.execute("SELECT anahtar, ilk FROM etkinlik_gorulen WHERE anahtar IN (%s)" % q, list(anahtarlar)).fetchall()) if anahtarlar else {}
+    return ilk, onceki

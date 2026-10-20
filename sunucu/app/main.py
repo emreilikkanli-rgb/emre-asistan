@@ -225,8 +225,9 @@ def ana(request: Request):
         "mailler": len(p.get("sikayet", [])) + len(p.get("odeme", [])) + len([c for c in p.get("takip", []) if c.get("_aksiyon")]),
         "is-planlama": len(gun["g_bugun"]) + len(gun["g_gec"]),
         "kibris-etkinlik": len([e for e in (db.etkinlik_son() or {}).get("data", {}).get("etkinlikler", [])
-                                if simdi.date().isoformat() <= e["tarih"] <= (simdi.date() + timedelta(days=7)).isoformat()]),
+                                if e.get("yeni") and (e.get("bitis_tarihi") or e["tarih"]) >= simdi.date().isoformat()]),
     }
+    etkinlik.baslat()  # sabah ilk açılışta (o gün tarama yoksa) etkinlikler arka planda taranır
     parcalar = []
     if rozet["ajanda"]:
         parcalar.append("ajandada %d iş" % rozet["ajanda"])

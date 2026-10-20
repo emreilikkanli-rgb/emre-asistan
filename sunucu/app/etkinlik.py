@@ -22,7 +22,7 @@ MODEL = "claude-haiku-5-5"
 # Claude Haiku 5.5: $0.10 / $0.50 per MTok (istem 100K token ve altı), üstünde $0.50 / $2.50; web araması $10 / 1000 arama
 FIYAT_KUCUK, FIYAT_BUYUK, ARAMA_FIYATI = (0.10, 0.50), (0.50, 2.50), 0.01
 MAX_ARAMA = 14
-OTOMATIK_SAAT = 24      # sayfa açılınca: son tarama bundan eskiyse yeniden ara
+# Otomatik tarama günde bir: o gün (Türkiye saatiyle) henüz başarılı tarama yoksa, uygulama ilk açılınca arka planda
 ELLE_DAKIKA = 30        # "Şimdi ara": en sık 30 dakikada bir
 _kilit = threading.Lock()
 
@@ -198,6 +198,7 @@ def _temizle(ham, adresler, bugun):
             url = ""  # aramada bulunmayan adres gösterilmez
         ucret = s("ucret", 20).lower()
         out.append({
+            "_anahtar": re.sub(r"\W+", "", ad.lower())[:48] + "|" + tarih,
             "ad": ad, "sanatci": s("sanatci", 160), "tur": s("tur", 20).lower() if s("tur", 20).lower() in TURLER else "diger",
             "mekan": s("mekan", 120), "sehir": s("sehir", 60), "tarih": tarih, "bitis_tarihi": bitis,
             "baslangic_saati": s("baslangic_saati", 5) if _SAAT.match(s("baslangic_saati", 5)) else "",
@@ -222,7 +223,14 @@ def gruplar(etkinlikler, bugun=None):
         bas = (date.fromisoformat(d["bas"]) - timedelta(days=1)).isoformat()  # arife gecesi programları da dahil
         es = [e for e in devam if e["tarih"] <= d["bit"] and (e.get("bitis_tarihi") or e["tarih"]) >= bas]
         ozel.append({"ad": d["ad"], "bas": d["bas"], "bit": d["bit"], "etkinlikler": es})
-    return {"yaklasan": yaklasan, "bu_ay": bu_ay, "ozel": ozel, "ozel_sayi": sum(len(o["etkinlikler"]) for o in ozel)}
+    hafta = (bugun + timedelta(days=7)).isoformat()
+    ozet = {
+        "yeni": [e for e in devam if e.get("yeni")],
+        "hafta": [e for e in devam if e["tarih"] <= hafta][:6],
+        "sayi_14": len(yaklasan), "ucretsiz_14": len([e for e in yaklasan if e["ucret"] == "ucretsiz"]),
+        "sayi_ay": len(bu_ay), "donem_sayi": len([o for o in ozel if o["etkinlikler"]]),
+    }
+    return {"yaklasan": yaklasan, "bu_ay": bu_ay, "ozel": ozel, "ozel_sayi": sum(len(o["etkinlikler"]) for o in ozel), "ozet": ozet}
 
 
 # ---------- Çalıştırma ----------
@@ -241,6 +249,11 @@ def tara():
         bugun = datetime.now(TZ).date()
         ham, adresler, maliyet = _ara(bugun)
         liste = _temizle(ham, adresler, bugun)
+        # Yeni eklenenler: önceki günlerin taramalarında görülmeyen etkinlikler (ilk tarama gününde hiçbiri "yeni" değildir)
+        ilk, onceki_gun_var = db.etkinlik_gorulen_isle([e["_anahtar"] for e in liste], bugun.isoformat())
+        for e in liste:
+            e["ilk_gorulme"] = ilk.get(e.pop("_anahtar"), bugun.isoformat())
+            e["yeni"] = onceki_gun_var and e["ilk_gorulme"] == bugun.isoformat()
         db.etkinlik_ekle("ok", data={"etkinlikler": liste, "not": str(ham.get("not") or "")[:300], "tarih": bugun.isoformat(),
                                      "kaynak_sayisi": len(adresler)}, maliyet=maliyet)
         log.info("Etkinlik taraması: %d etkinlik, %d kaynak, $%.4f", len(liste), len(adresler), maliyet)
@@ -252,14 +265,20 @@ def tara():
 
 
 def baslat(elle=False):
-    """Sayfa açılınca (elle=False: son tarama 24 saatten eskiyse) ya da 'Şimdi ara' ile (30 dk sınırı) arka planda tarar."""
+    """elle=False: uygulama açılınca, o gün başarılı tarama yoksa (hata olduysa 1 saat sonra yeniden).
+    elle=True: "Şimdi ara" ile, en sık 30 dakikada bir. Tarama arka planda; sayfa beklemez."""
     if _kilit.locked():
         return "calisiyor"
+    simdi = datetime.now(timezone.utc)
     son = db.etkinlik_son(sadece_ok=False)
-    if son:
-        gecen = (datetime.now(timezone.utc) - datetime.fromisoformat(son["created_at"])).total_seconds()
-        esik = ELLE_DAKIKA * 60 if elle else (OTOMATIK_SAAT * 3600 if son["status"] == "ok" else 3600)
-        if gecen < esik:
+    if elle:
+        if son and son["status"] == "ok" and (simdi - datetime.fromisoformat(son["created_at"])).total_seconds() < ELLE_DAKIKA * 60:
+            return "guncel"
+    else:
+        ok = db.etkinlik_son()
+        if ok and datetime.fromisoformat(ok["created_at"]).astimezone(TZ).date() == simdi.astimezone(TZ).date():
+            return "guncel"
+        if son and son["status"] != "ok" and (simdi - datetime.fromisoformat(son["created_at"])).total_seconds() < 3600:
             return "guncel"
     threading.Thread(target=tara, daemon=True).start()
     return "basladi"
