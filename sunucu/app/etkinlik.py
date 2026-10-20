@@ -14,14 +14,14 @@ from zoneinfo import ZoneInfo
 
 import anthropic
 
-from . import db
+from . import db, gisekibris
 
 log = logging.getLogger("ea.etkinlik")
 TZ = ZoneInfo("Europe/Istanbul")
 MODEL = "claude-haiku-5-5"
 # Claude Haiku 5.5: $0.10 / $0.50 per MTok (istem 100K token ve altı), üstünde $0.50 / $2.50; web araması $10 / 1000 arama
 FIYAT_KUCUK, FIYAT_BUYUK, ARAMA_FIYATI = (0.10, 0.50), (0.50, 2.50), 0.01
-MAX_ARAMA = 14
+MAX_ARAMA = 10  # Gişe Kıbrıs doğrudan okunduğu için web araması yalnızca eksikleri tamamlar
 # Otomatik tarama günde bir: o gün (Türkiye saatiyle) henüz başarılı tarama yoksa, uygulama ilk açılınca arka planda
 ELLE_DAKIKA = 30        # "Şimdi ara": en sık 30 dakikada bir
 _kilit = threading.Lock()
@@ -106,13 +106,14 @@ Kurallar:
 - Yalnızca istenen tarih aralığındaki etkinlikler. Tarihi açıkça belli olmayan etkinliği alma; uydurma bilgi ekleme.
 - Etkinlik adı, sanatçı adı soyadı, mekân, şehir, tarih, başlangıç ve bitiş saati, ücret bilgisini sayfadan aynen al. Ücretsiz ise "ucretsiz", bilet/giriş ücreti varsa "ucretli" (tutarı ucret_detay'a), belli değilse "bilinmiyor" yaz.
 - kaynak_url: bilgiyi aldığın arama sonucunun adresi (yalnızca arama sonuçlarında gördüğün adresler).
-- Türkçe, Instagram/Facebook duyurularını da aratmak için "instagram" ya da "facebook" kelimeli aramalar da yap.
+- Instagram'daki @kibris_etkinlikleri hesabının duyurularını mutlaka tara: "kibris_etkinlikleri instagram", "site:instagram.com kibris_etkinlikleri" gibi aramalar yap; arama sonuçlarında görünen gönderi metinlerinden etkinlik çıkar. Diğer mekân ve otellerin Instagram/Facebook duyuruları için de "instagram" ya da "facebook" kelimeli aramalar yap.
+- Gişe Kıbrıs (gisekibris.com) etkinlikleri sana ayrıca liste olarak verilir; onları TEKRAR YAZMA, yalnızca listede olmayan etkinlikleri yaz.
 En fazla 60 etkinlik yaz (önce en yakın tarihliler ve özel dönemler); JSON'u kısa ve sıkı tut.
 Aramaları bitirince YALNIZCA şu biçimde tek bir JSON nesnesi yaz, başka metin yazma:
 {"etkinlikler": [{"ad": "", "sanatci": "", "tur": "konser|tiyatro|festival|parti|gala|sergi|spor|cocuk|kultur|diger", "mekan": "", "sehir": "", "tarih": "YYYY-AA-GG", "bitis_tarihi": "YYYY-AA-GG ya da boş", "baslangic_saati": "SS:DD ya da boş", "bitis_saati": "SS:DD ya da boş", "ucret": "ucretsiz|ucretli|bilinmiyor", "ucret_detay": "", "aciklama": "en fazla 1 kısa cümle", "kaynak_url": "", "kaynak_adi": ""}], "not": "aramada eksik kalan ya da doğrulanamayan konular, en fazla 2 cümle"}"""
 
 
-def _istem(bugun):
+def _istem(bugun, bilinen=()):
     ay_sonu = (date(bugun.year + (bugun.month == 12), bugun.month % 12 + 1, 1) - timedelta(days=1))
     son = bugun + timedelta(days=90)
     donemler = _donemler(bugun)
@@ -123,7 +124,9 @@ def _istem(bugun):
             f"Öncelik sırası:\n1) Önümüzdeki 14 gün (yaklaşan etkinlikler),\n2) Bu ay sonuna kadar ({ay_sonu.isoformat()}),\n"
             f"3) Şu özel dönemlerde yapılacak kutlama, konser, gala ve programlar:\n{satirlar}\n"
             f"Her özel dönem için ayrıca arama yap (ör. '29 Ekim KKTC konser', '15 Kasım KKTC etkinlik', 'Kıbrıs yılbaşı galası {bugun.year} otel'). "
-            f"Yaklaşık {MAX_ARAMA} aramayı aşma.")
+            f"Yaklaşık {MAX_ARAMA} aramayı aşma.\n\n"
+            + ("Gişe Kıbrıs'tan zaten alınan etkinlikler (bunları tekrar yazma):\n" + "\n".join("- %s · %s%s" % (e["tarih"], e["ad"], (" · " + e["mekan"]) if e.get("mekan") else "") for e in bilinen[:120])
+               if bilinen else "Gişe Kıbrıs listesi bu kez alınamadı; gisekibris.com etkinliklerini de web aramasıyla ara."))
 
 
 def _maliyet(u_in, u_out, aramalar):
@@ -143,12 +146,12 @@ def _json_al(metin):
         raise
 
 
-def _ara(bugun):
+def _ara(bugun, bilinen=()):
     """Claude'a web araması yaptırır. Dönüş: (ham JSON nesnesi, bulunan adresler, maliyet $)."""
     client = anthropic.Anthropic(max_retries=3)
     tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": MAX_ARAMA,
               "user_location": {"type": "approximate", "city": "Kyrenia", "timezone": "Asia/Nicosia"}}]
-    messages = [{"role": "user", "content": _istem(bugun)}]
+    messages = [{"role": "user", "content": _istem(bugun, bilinen)}]
     u_in = u_out = aramalar = 0
     adresler = set()
     for _ in range(5):  # pause_turn devamları için üst sınır
@@ -223,6 +226,56 @@ def _temizle(ham, adresler, bugun):
     return out
 
 
+_TR = str.maketrans("çğıöşüâîûÇĞİÖŞÜ", "cgiosuaiucgiosu")
+# Ayırt edici olmayan kelimeler: eşleşmede sayılmaz (ör. "Leo Club Halloween" ile "Kybele Club Halloween" farklıdır)
+_DOLGU = {"konser", "konseri", "x", "ile", "ve", "the", "and", "gecesi", "night", "party", "parti", "live", "canli", "etkinligi",
+          "special", "ozel", "w", "club", "bar", "lounge", "hotel", "otel", "halloween", "cadilar", "bayrami", "cocuk", "tiyatro",
+          "tiyatrosu", "festival", "festivali", "presents", "by", "at", "in", "of", "music", "muzik", "dj", "show", "gala", "yilbasi"}
+
+
+def _kelimeler(ad):
+    # Türkçe büyük İ/I küçültülünce araya birleşik nokta girmesin
+    t = (ad or "").replace("İ", "i").replace("I", "ı").lower().replace("\u0307", "").translate(_TR)
+    return {k for k in re.split(r"[^a-z0-9]+", t) if len(k) > 1 and k not in _DOLGU}
+
+
+def _ayni(a, b):
+    """Aynı gün ve adları büyük ölçüde örtüşen iki etkinlik aynıdır."""
+    if a["tarih"] != b["tarih"]:
+        return False
+    ka, kb = _kelimeler(a["ad"]) | _kelimeler(a.get("sanatci")), _kelimeler(b["ad"]) | _kelimeler(b.get("sanatci"))
+    if not ka or not kb:
+        return False
+    # Aynı kaynakta, mekânları tamamen farklı iki kayıt ayrı etkinliktir (ör. aynı sanatçının aynı gün iki mekânda konseri)
+    if a.get("kaynak") and a.get("kaynak") == b.get("kaynak"):
+        ma, mb = _kelimeler(a.get("mekan")), _kelimeler(b.get("mekan"))
+        if ma and mb and not (ma & mb):
+            return False
+    ortak = len(ka & kb)
+    return ortak / len(ka | kb) >= 0.5 or ortak == min(len(ka), len(kb))
+
+
+def birlestir(*kaynaklar):
+    """Kaynakları sırayla birleştirir; aynı etkinlik bir kez gösterilir, ilk kaynaktaki kayıt esas alınır ve boş alanları sonrakilerden tamamlanır."""
+    out = []
+    for liste in kaynaklar:
+        for e in liste:
+            es = next((x for x in out if _ayni(x, e)), None)
+            if es is None:
+                out.append(dict(e))
+                continue
+            for k, v in e.items():
+                if v and not es.get(k) and not k.startswith("_"):
+                    es[k] = v
+            if es.get("ucret") == "bilinmiyor" and e.get("ucret") in ("ucretli", "ucretsiz"):
+                es["ucret"], es["ucret_detay"] = e["ucret"], e.get("ucret_detay") or es.get("ucret_detay", "")
+            es.setdefault("diger_kaynaklar", [])
+            if e.get("kaynak_url") and e["kaynak_url"] != es.get("kaynak_url"):
+                es["diger_kaynaklar"].append({"ad": e.get("kaynak_adi") or "kaynak", "url": e["kaynak_url"]})
+    out.sort(key=lambda e: (e["tarih"], e.get("baslangic_saati") or "99"))
+    return out
+
+
 def gruplar(etkinlikler, bugun=None):
     """Sayfa için: yaklaşan (14 gün), bu ay, özel dönemler (dönem başına liste)."""
     bugun = bugun or datetime.now(TZ).date()
@@ -260,16 +313,33 @@ def tara():
             db.etkinlik_ekle("atlandi", hata="Aylık API limiti ($%.2f) doldu; etkinlik araması yapılmadı." % limit)
             return
         bugun = datetime.now(TZ).date()
-        ham, adresler, maliyet = _ara(bugun)
-        liste = _temizle(ham, adresler, bugun)
+        notlar, gise, ai, maliyet, ham, adresler = [], [], [], 0.0, {}, set()
+        try:
+            gise, _ = gisekibris.topla(bugun)
+        except Exception as ex:
+            log.warning("Gişe Kıbrıs okunamadı: %s", ex)
+            notlar.append("Gişe Kıbrıs bu kez okunamadı.")
+        try:
+            ham, adresler, maliyet = _ara(bugun, gise)
+            ai = _temizle(ham, adresler, bugun)
+        except AramaHatasi as ex:
+            maliyet = ex.maliyet
+            if not gise:
+                raise
+            notlar.append("Web araması tamamlanamadı (%s); yalnızca Gişe Kıbrıs gösteriliyor." % ex)
+        for e in gise:
+            e["_anahtar"] = re.sub(r"\W+", "", e["ad"].lower())[:48] + "|" + e["tarih"]
+        liste = birlestir(gise, ai)
         # Yeni eklenenler: önceki günlerin taramalarında görülmeyen etkinlikler (ilk tarama gününde hiçbiri "yeni" değildir)
         ilk, onceki_gun_var = db.etkinlik_gorulen_isle([e["_anahtar"] for e in liste], bugun.isoformat())
         for e in liste:
             e["ilk_gorulme"] = ilk.get(e.pop("_anahtar"), bugun.isoformat())
             e["yeni"] = onceki_gun_var and e["ilk_gorulme"] == bugun.isoformat()
-        db.etkinlik_ekle("ok", data={"etkinlikler": liste, "not": str(ham.get("not") or "")[:300], "tarih": bugun.isoformat(),
-                                     "kaynak_sayisi": len(adresler)}, maliyet=maliyet)
-        log.info("Etkinlik taraması: %d etkinlik, %d kaynak, $%.4f", len(liste), len(adresler), maliyet)
+        notlar.append(str(ham.get("not") or "")[:300])
+        db.etkinlik_ekle("ok", data={"etkinlikler": liste, "not": " ".join(n for n in notlar if n), "tarih": bugun.isoformat(),
+                                     "kaynak_sayisi": len(adresler) + (1 if gise else 0), "gise_sayisi": len(gise), "web_sayisi": len(ai)},
+                         maliyet=maliyet)
+        log.info("Etkinlik taraması: %d etkinlik (Gişe Kıbrıs %d, web %d), $%.4f", len(liste), len(gise), len(ai), maliyet)
     except Exception as ex:  # hata kaydedilir, sunucu düşmez
         log.exception("Etkinlik taraması başarısız")
         db.etkinlik_ekle("hata", hata="Etkinlikler aranamadı: %s" % (str(ex)[:200] or ex.__class__.__name__),

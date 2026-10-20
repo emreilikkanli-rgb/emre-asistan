@@ -15,14 +15,17 @@
     <div class="e-govde">
       <b class="e-ad">{{ e.ad }}</b>
       {% if e.sanatci %}<span class="e-sanatci">{{ e.sanatci }}</span>{% endif %}
-      <span class="e-yer">📍 {{ e.mekan or 'Mekân belirtilmemiş' }}{% if e.sehir %} · {{ e.sehir }}{% endif %}</span>
+      <span class="e-yer">📍 {{ e.mekan or 'Mekân belirtilmemiş' }}{% if e.sehir %} · {{ e.sehir }}{% endif %}{% if e.adres %}<small> · {{ e.adres }}</small>{% endif %}</span>
       <span class="e-etiketler">
         <span class="e-saat">🕒 {% if e.baslangic_saati %}{{ e.baslangic_saati }}{% if e.bitis_saati %} – {{ e.bitis_saati }}{% endif %}{% else %}Saat belirtilmemiş{% endif %}</span>
         <span class="e-ucret {{ e.ucret }}">{{ {'ucretsiz': 'Ücretsiz', 'ucretli': 'Ücretli', 'bilinmiyor': 'Ücret bilinmiyor'}[e.ucret] }}{% if e.ucret_detay %} · {{ e.ucret_detay }}{% endif %}</span>
         <span class="e-tur">{{ TUR.get(e.tur, '✨ Etkinlik') }}</span>
       </span>
       {% if e.aciklama %}<span class="e-aciklama">{{ e.aciklama }}</span>{% endif %}
-      {% if e.kaynak_url %}<a class="e-kaynak" href="{{ e.kaynak_url }}" target="_blank" rel="noopener noreferrer">Kaynak: {{ e.kaynak_adi or 'sayfayı aç' }} ↗</a>{% endif %}
+      {% if e.kaynak_url or e.diger_kaynaklar %}<span class="e-kaynaklar">
+        {% if e.kaynak_url %}<a class="e-kaynak" href="{{ e.kaynak_url }}" target="_blank" rel="noopener noreferrer">{{ 'Gişe Kıbrıs · bilet ve detay' if e.kaynak == 'gise' else 'Kaynak: ' ~ (e.kaynak_adi or 'sayfayı aç') }} ↗</a>{% endif %}
+        {% for k in (e.diger_kaynaklar or [])[:2] %}<a class="e-kaynak" href="{{ k.url }}" target="_blank" rel="noopener noreferrer">{{ k.ad }} ↗</a>{% endfor %}
+      </span>{% endif %}
     </div>
   </li>
 {% endmacro %}
@@ -31,7 +34,7 @@
   <p class="hub-sub" style="margin:0 0 4px">Emre'nin Asistanı</p>
   <h1>Kıbrıs Etkinlikleri</h1>
   <p>KKTC'de konser, tiyatro, festival, otel ve mekân etkinlikleri ·
-    {% if son %}son tarama {{ son.created_at | uzun_tarih }}{% if son.data.kaynak_sayisi %} · {{ son.data.kaynak_sayisi }} kaynak{% endif %}{% else %}henüz tarama yok{% endif %}</p>
+    {% if son %}son tarama {{ son.created_at | uzun_tarih }}{% if son.data.gise_sayisi is defined %} · Gişe Kıbrıs {{ son.data.gise_sayisi }}, web ve Instagram {{ son.data.web_sayisi }} etkinlik{% elif son.data.kaynak_sayisi %} · {{ son.data.kaynak_sayisi }} kaynak{% endif %}{% else %}henüz tarama yok{% endif %}</p>
   <div class="row" style="margin-top:12px">
     <button class="btn primary" type="button" id="araDugme" {{ 'disabled' if araniyor }}>{{ 'Aranıyor…' if araniyor else '🔎 Şimdi ara' }}</button>
   </div>
