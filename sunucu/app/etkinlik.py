@@ -26,6 +26,13 @@ MAX_ARAMA = 14
 ELLE_DAKIKA = 30        # "Şimdi ara": en sık 30 dakikada bir
 _kilit = threading.Lock()
 
+
+class AramaHatasi(RuntimeError):
+    """Arama başarısız oldu; o ana kadar harcanan tutar da aylık limite yazılır."""
+    def __init__(self, mesaj, maliyet=0.0):
+        super().__init__(mesaj)
+        self.maliyet = maliyet
+
 AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
 
 
@@ -100,8 +107,9 @@ Kurallar:
 - Etkinlik adı, sanatçı adı soyadı, mekân, şehir, tarih, başlangıç ve bitiş saati, ücret bilgisini sayfadan aynen al. Ücretsiz ise "ucretsiz", bilet/giriş ücreti varsa "ucretli" (tutarı ucret_detay'a), belli değilse "bilinmiyor" yaz.
 - kaynak_url: bilgiyi aldığın arama sonucunun adresi (yalnızca arama sonuçlarında gördüğün adresler).
 - Türkçe, Instagram/Facebook duyurularını da aratmak için "instagram" ya da "facebook" kelimeli aramalar da yap.
+En fazla 60 etkinlik yaz (önce en yakın tarihliler ve özel dönemler); JSON'u kısa ve sıkı tut.
 Aramaları bitirince YALNIZCA şu biçimde tek bir JSON nesnesi yaz, başka metin yazma:
-{"etkinlikler": [{"ad": "", "sanatci": "", "tur": "konser|tiyatro|festival|parti|gala|sergi|spor|cocuk|kultur|diger", "mekan": "", "sehir": "", "tarih": "YYYY-AA-GG", "bitis_tarihi": "YYYY-AA-GG ya da boş", "baslangic_saati": "SS:DD ya da boş", "bitis_saati": "SS:DD ya da boş", "ucret": "ucretsiz|ucretli|bilinmiyor", "ucret_detay": "", "aciklama": "en fazla 2 cümle", "kaynak_url": "", "kaynak_adi": ""}], "not": "aramada eksik kalan ya da doğrulanamayan konular, en fazla 2 cümle"}"""
+{"etkinlikler": [{"ad": "", "sanatci": "", "tur": "konser|tiyatro|festival|parti|gala|sergi|spor|cocuk|kultur|diger", "mekan": "", "sehir": "", "tarih": "YYYY-AA-GG", "bitis_tarihi": "YYYY-AA-GG ya da boş", "baslangic_saati": "SS:DD ya da boş", "bitis_saati": "SS:DD ya da boş", "ucret": "ucretsiz|ucretli|bilinmiyor", "ucret_detay": "", "aciklama": "en fazla 1 kısa cümle", "kaynak_url": "", "kaynak_adi": ""}], "not": "aramada eksik kalan ya da doğrulanamayan konular, en fazla 2 cümle"}"""
 
 
 def _istem(bugun):
@@ -144,7 +152,9 @@ def _ara(bugun):
     u_in = u_out = aramalar = 0
     adresler = set()
     for _ in range(5):  # pause_turn devamları için üst sınır
-        resp = client.messages.create(model=MODEL, max_tokens=16000, system=SISTEM, messages=messages, tools=tools)
+        # Uzun yanıt (düşünme + arama + JSON) için geniş sınır; büyük max_tokens'ta zaman aşımı olmasın diye akışla al
+        with client.messages.stream(model=MODEL, max_tokens=64000, system=SISTEM, messages=messages, tools=tools) as akis:
+            resp = akis.get_final_message()
         u_in += resp.usage.input_tokens
         u_out += resp.usage.output_tokens
         stu = getattr(resp.usage, "server_tool_use", None)
@@ -156,14 +166,17 @@ def _ara(bugun):
             messages = messages + [{"role": "assistant", "content": resp.content}]  # duraklayan turu aynen geri gönder
             continue
         if resp.stop_reason == "refusal":
-            raise RuntimeError("Model aramayı reddetti.")
+            raise AramaHatasi("Model aramayı reddetti.", _maliyet(u_in, u_out, aramalar))
         if resp.stop_reason == "max_tokens":
-            raise RuntimeError("Yanıt yarıda kesildi.")
+            raise AramaHatasi("Yanıt çok uzun olduğu için yarıda kesildi.", _maliyet(u_in, u_out, aramalar))
         # Son arama sonucundan sonraki metin blokları JSON'u taşır (alıntılar metni bölebilir)
         son = max((i for i, b in enumerate(resp.content) if b.type == "web_search_tool_result"), default=-1)
         metin = "".join(b.text for b in resp.content[son + 1:] if b.type == "text")
-        return _json_al(metin), adresler, _maliyet(u_in, u_out, aramalar)
-    raise RuntimeError("Arama çok uzun sürdü; daha sonra yeniden deneyin.")
+        try:
+            return _json_al(metin), adresler, _maliyet(u_in, u_out, aramalar)
+        except ValueError:
+            raise AramaHatasi("Sonuç okunamadı (JSON değil).", _maliyet(u_in, u_out, aramalar))
+    raise AramaHatasi("Arama çok uzun sürdü; daha sonra yeniden deneyin.", _maliyet(u_in, u_out, aramalar))
 
 
 # ---------- Doğrulama ve gruplama ----------
@@ -259,7 +272,8 @@ def tara():
         log.info("Etkinlik taraması: %d etkinlik, %d kaynak, $%.4f", len(liste), len(adresler), maliyet)
     except Exception as ex:  # hata kaydedilir, sunucu düşmez
         log.exception("Etkinlik taraması başarısız")
-        db.etkinlik_ekle("hata", hata="Etkinlikler aranamadı: %s" % (str(ex)[:200] or ex.__class__.__name__))
+        db.etkinlik_ekle("hata", hata="Etkinlikler aranamadı: %s" % (str(ex)[:200] or ex.__class__.__name__),
+                         maliyet=getattr(ex, "maliyet", 0.0))
     finally:
         _kilit.release()
 
