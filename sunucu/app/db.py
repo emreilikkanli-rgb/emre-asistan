@@ -1,5 +1,6 @@
 """SQLite veritabanı (Railway'de kalıcı diskte: DATA_DIR)."""
 import json
+import re
 import os
 import sqlite3
 import threading
@@ -19,6 +20,8 @@ DEFAULT_SETTINGS = {
     "tartisma_kelimeleri": "kabul edilemez; kabul etmiyoruz; kabul etmemiz mümkün değil; itiraz; tekrar hatırlat; ikinci kez; defalarca; hala dönüş; hâlâ dönüş; halen dönüş; dönüş alamadık; dönüş sağlanmadı; yanıt alamadık; cevap alamadık; ısrarla; mağduriyet; mağdur; sorumluluk; no show; noshow; tazminat; hata yapılmış; yanlış bilgi; yanlış fiyat; yanlış rezervasyon; bilginiz dışında; sitem; üzülerek; anlaşılamadı",
     "rehber_kelimeleri": "rehber; rehberi; rehberimiz; guide; tur lideri",
     "rehber_olumsuz": "şikayet; şikâyet; memnun; ilgisiz; ilgilenmedi; kaba; saygısız; geç kaldı; gelmedi; ulaşılamadı; davranış; tavır; sorun; problem; hata; mağdur; complaint",
+    "kampanya_kelimeleri": "kampanya; campaign; özel fiyat; özel teklif; special offer; indirim; discount; erken rezervasyon; early booking; erken ödeme; promosyon; promotion; fırsat; son dakika; last minute; stop sale; stopsale; release; allotment; kontenjan açıldı; yeni fiyat; fiyat güncelleme; rate update; new rates; kontrat; contract; özel aksiyon; aksiyon; paket fiyat; black friday; yılbaşı programı; gala; free night; ücretsiz gece; upgrade; komisyon; incentive",
+    "sitem_kelimeleri": "maalesef; hayal kırıklığı; üzücü; kabul etmiyoruz; kabul edemiyoruz; kabul edilemez; hala; hâlâ; halen; defalarca; tekrar tekrar; ikinci kez; üçüncü kez; rica etmemize rağmen; rica ettiğimiz halde; bilgimiz dışında; dönüş alamadık; yanıt alamadık; cevap alamadık; bekletiliyoruz; mağdur; ihmal; sorumluluk sizde; ciddiyetsiz; yanlış bilgi; hatalı; şikayetçiyiz; şikâyetçiyiz; sitem; memnun değiliz; iş birliğimizi; çalışmayı sonlandır; son kez; ivedilikle; acilen; urgent; asap; disappointed; unacceptable; not acceptable; still waiting; complaint; unhappy; poor service; escalate",
     "ajanda_gonderenler": "",
     "aylik_limit_usd": "5",
     "takvim": "",  # boş: otomatik kontrol yok, yalnızca sayfa açılınca/yenilenince
@@ -55,6 +58,16 @@ def init():
         cols = [r[1] for r in c.execute("PRAGMA table_info(sessions)")]
         if "kalici" not in cols:  # "Beni hatırla" oturumları
             c.execute("ALTER TABLE sessions ADD COLUMN kalici INTEGER NOT NULL DEFAULT 0")
+        # 21 Ekim 2026: Emre Bey'in eklediği önemli kişiler (yoksa eklenir; Ayarlar'dan düzenlenebilir)
+        mevcut = c.execute("SELECT value FROM settings WHERE key='oncelikli'").fetchone()
+        mevcut = mevcut[0] if mevcut else ""
+        eklenecek = ["Mehmet Mülayim", "Hakan Ural", "Hatice @concorde", "Ulaş @concorde", "Hakan @dome", "Serdar @cratos",
+                     "Hulusi @cratos", "Süleyman @salamis", "Şeref", "Mehtap @merit"]
+        satirlar = [x.strip() for x in re.split(r"[;\n]", mevcut) if x.strip()]
+        yeni = [e for e in eklenecek if e.lower() not in {x.lower() for x in satirlar}]
+        if yeni:
+            c.execute("INSERT INTO settings(key, value) VALUES('oncelikli', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                      ("\n".join(satirlar + yeni),))
         # 20 Ekim 2026 (Emre Bey'in isteği, bütçe): otomatik kontrol yok; eski varsayılan takvim boşaltılır.
         c.execute("UPDATE settings SET value='' WHERE key='takvim' AND value='08:30=sabah;13:00=ara;17:00=ara'")
 

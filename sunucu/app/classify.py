@@ -17,7 +17,7 @@ def words(text):
 
 
 def _hits(text, ws):
-    return [w for w in ws if re.search(r"\b" + re.escape(w), text)]
+    return list(dict.fromkeys(w for w in ws if re.search(r"\b" + re.escape(w), text)))  # sırayı koru, tekrarları at
 
 
 def parse_vips(text):
@@ -56,6 +56,7 @@ SECTIONS = [
     ("sikayet", "ŞİKÂYET ŞÜPHESİ"),
     ("odeme", "ÖDEME TALEBİ / GİRİŞ RİSKİ"),
     ("vip", "ÖNCELİKLİ KİŞİLER"),
+    ("kampanya", "OTEL KAMPANYA / ÖZEL AKSİYON"),
     ("mine", "SİZE DOĞRUDAN İLGİLİ"),
     ("ortak", "ORTAK MAİLLERDE TARTIŞMA İŞARETİ"),
 ]
@@ -75,6 +76,8 @@ def classify(msgs, cfg):
     w_disp = words(cfg.get("tartisma_kelimeleri", ""))
     w_guide = words(cfg.get("rehber_kelimeleri", ""))
     w_guide_neg = words(cfg.get("rehber_olumsuz", ""))
+    w_camp = words(cfg.get("kampanya_kelimeleri", ""))
+    w_sitem = words(cfg.get("sitem_kelimeleri", ""))
 
     sections = defaultdict(list)
     seen = {}
@@ -103,8 +106,14 @@ def classify(msgs, cfg):
             comp.append("rehber şikâyeti")
         pay = _hits(ntext, w_pay)
         disp = _hits(ntext, w_disp)
+        dis = bool(own_domain) and not norm(m["from_addr"]).strip().endswith(own_domain)  # şirket dışından (otel, acente, partner)
+        sitem = _hits(ntext, w_sitem) if dis else []
+        if sitem:
+            comp.append("partner sitemi: " + ", ".join(sitem[:4]))
+        camp = _hits(ntext, w_camp) if dis else []
 
-        sec = "sikayet" if comp else "odeme" if pay else "vip" if vip else "mine" if why else "ortak" if disp else None
+        sec = ("sikayet" if comp else "odeme" if pay else "vip" if vip else "kampanya" if camp else "mine" if why
+               else "ortak" if disp else None)
         if sec is None:
             others[to or "(boş)"] += 1
             k = thread_key(subj)
@@ -119,6 +128,8 @@ def classify(msgs, cfg):
             why.append("ödeme / giriş riski: " + ", ".join(pay))
         if disp:
             why.append("tartışma işareti: " + ", ".join(disp))
+        if camp:
+            why.append("otel kampanya / özel aksiyon: " + ", ".join(camp[:4]))
         key = norm("%s|%s|%s" % (m["from_addr"], subj, prev[:120]))
         if key in seen:
             seen[key]["dupes"] += 1

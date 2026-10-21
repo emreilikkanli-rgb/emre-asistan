@@ -55,9 +55,9 @@ def run(kind="sabah", hours=None):
         msgs, total = ews.find_messages(hours)
         cfg["_total"] = total
         result = classify(msgs, cfg)
-        ids = [m["id"] for sec in ("sikayet", "odeme", "ortak", "vip", "mine") for m in result["sections"].get(sec, [])]
+        ids = [m["id"] for sec in ("sikayet", "odeme", "vip", "kampanya", "ortak", "mine") for m in result["sections"].get(sec, [])]
         ids += [b["latest"]["id"] for b in result["busy"]]
-        bodies = ews.get_bodies(ids, limit=90)
+        bodies = ews.get_bodies(ids, limit=120)
         now = datetime.now(TZ)
         label = "%s → %s" % ((now - timedelta(hours=hours)).strftime("%d.%m %H:%M"), now.strftime("%d.%m %H:%M"))
         data, cands, usage = analyze(result, bodies, cfg, label)

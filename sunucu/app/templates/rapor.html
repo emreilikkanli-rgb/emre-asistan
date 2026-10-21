@@ -25,11 +25,12 @@
 {% if d.bildirim %}<div class="note">{{ d.bildirim }}</div>{% endif %}
 
 {% set bolumler = [
-  ('p-takipte', 'takipte', 'Takibimdeki', 'Mailler', "Takibe devam dediğiniz mailler; Okudum diyene kadar burada kalır", 'blue', p.takipte, 'Takibinizde mail yok. Bir mailde "Takibe devam"a basınca buraya gelir.'),
+  ('p-takipte', 'takipte', 'Takibimdeki', 'Mailler', "Takip et dediğiniz mailler; Okudum diyene kadar burada kalır", 'blue', p.takipte, 'Takibinizde mail yok. Bir mailde "Takip et"e basınca buraya gelir.'),
   ('p-vip', 'vip', 'Önemli', 'Kişiler', 'Öncelikli kişilerin yazdığı ya da karıştığı konular', 'violet', p.vip, 'Öncelikli kişilerden önemli gelişme yok.'),
   ('p-takip', 'takip', 'Takip', 'Edilecekler', "Sizden cevap bekleyenler ve CC'de süren işler", 'amber', p.takip, 'Takip gerektiren mail yok.'),
+  ('p-kampanya', 'kampanya', 'Otel', 'Kampanyaları', 'Otellerden özel aksiyon, kampanya, özel fiyat, stop sale ve release duyuruları', 'orange', p.kampanya, 'Bu dönemde otel kampanyası ya da özel aksiyon maili yok.'),
   ('p-ortak', 'tartisma', 'Karşılıklı', 'Tartışmalar', 'Ortak adreslerde itiraz, ceza, no-show ve gerginlikler', 'teal', p.ortak, 'Ortak maillerde öne çıkan tartışma yok.'),
-  ('p-sikayet', 'sikayet', 'Şikâyet', 'Mailleri', 'Misafir, acente ve rehber şikâyetleri, iade talepleri', 'red', p.sikayet, 'Bu dönemde şikâyet yok.'),
+  ('p-sikayet', 'sikayet', 'Şikâyet', 've Sitemler', 'Misafir, acente, rehber şikâyetleri; partnerlerden sitemli ve olumsuz mailler (ayrıntılı inceleme)', 'red', p.sikayet, 'Bu dönemde şikâyet yok.'),
   ('p-odeme', 'odeme', 'Ödeme', 'Mailleri', 'Otel ve acentelerden ödeme talepleri, son tarihler, giriş riski', 'orange', p.odeme, 'Ödeme talebi ya da giriş riski bildiren mail yok.'),
 ] %}
 <nav class="m-ikonlar" aria-label="Ana başlıklar">
@@ -101,7 +102,7 @@
     if (nav.type === 'reload' || (nav.type === 'navigate' && !oku)) iste();
     else if (kutu.classList.contains('on')) izle();
   })();
-  // Okudum / Takibe devam / Gerek yok: satır listeden kalkar, "Geri al" ile geri gelir
+  // Okudum / Takip et / Gerek yok: satır listeden kalkar, "Geri al" ile geri gelir
   (function () {
     var csrf = '{{ csrf }}', toast = null, toastZaman = null;
     function rozetGuncelle(panel) {

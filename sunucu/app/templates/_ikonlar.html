@@ -8,7 +8,7 @@
   'vip': ('#8e2de2', '#c471f5'), 'takip': ('#f7971e', '#ffd200'), 'tartisma': ('#0ba5c4', '#4facfe'),
   'sikayet': ('#e53935', '#ff7a59'), 'odeme': ('#f2994a', '#f2c94c'), 'takipte': ('#00a884', '#7bd389'), 'kibris-etkinlik': ('#00b4db', '#ff6a88'),
   'yaklasan': ('#11998e', '#38ef7d'), 'bu-ay': ('#7f53ac', '#c471f5'), 'ozel-donem': ('#f12711', '#f5af19'),
-  'turkiye': ('#c31432', '#ff5f6d'), 'kktc': ('#d31027', '#ea384d'), 'turizm': ('#0083b0', '#00d4ff'), 'turkce': ('#5f2c82', '#49a09d')
+  'turkiye': ('#c31432', '#ff5f6d'), 'kktc': ('#d31027', '#ea384d'), 'turizm': ('#0083b0', '#00d4ff'), 'turkce': ('#5f2c82', '#49a09d'), 'kampanya': ('#ee0979', '#ff6a00')
 }[slug] %}
 <span class="ikon ikon-{{ slug }}" style="--g1: {{ renk[0] }}; --g2: {{ renk[1] }}" aria-hidden="true">
   <span class="parlak"></span>
@@ -88,6 +88,9 @@
     <svg viewBox="0 0 64 64"><path d="M30 12c2 0 3 2 3 4v12l17 9v5l-17-5v9l5 4v4l-8-2-8 2v-4l5-4v-9l-17 5v-5l17-9V16c0-2 1-4 3-4z" fill="#fff"/><circle class="nabiz" cx="49" cy="17" r="4" fill="#ffd166"/></svg>
   {% elif slug == 'turkce' %}
     <svg viewBox="0 0 64 64"><path d="M10 18a6 6 0 0 1 6-6h32a6 6 0 0 1 6 6v20a6 6 0 0 1-6 6H26l-10 8v-8a6 6 0 0 1-6-6z" fill="#fff"/><text x="32" y="34" text-anchor="middle" font-size="15" font-weight="800" fill="#5f2c82" font-family="-apple-system, Segoe UI, sans-serif">TR</text></svg>
+  {% elif slug == 'kampanya' %}
+    <svg viewBox="0 0 64 64"><path d="M12 27a4 4 0 0 1 4-4h8l20-10v38L24 41h-8a4 4 0 0 1-4-4z" fill="#fff"/><path d="M20 41l3 11h6l-2-11" fill="#fff" opacity=".85"/>
+      <path class="nabiz" d="M50 22l4-3M51 32h5M50 42l4 3" stroke="#fff" stroke-width="3" stroke-linecap="round"/><text x="34" y="36" text-anchor="middle" font-size="12" font-weight="800" fill="#ee0979" font-family="-apple-system, Segoe UI, sans-serif">%</text></svg>
   {% elif slug == 'ayarlar' %}
     <svg viewBox="0 0 64 64"><g class="cark"><path d="M32 13l4 5 6-2 1 6 6 2-2 6 5 4-5 4 2 6-6 2-1 6-6-2-4 5-4-5-6 2-1-6-6-2 2-6-5-4 5-4-2-6 6-2 1-6 6 2z" fill="#fff"/><circle cx="32" cy="32" r="7" fill="#7a8396"/></g></svg>
   {% endif %}

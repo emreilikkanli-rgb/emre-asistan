@@ -18,7 +18,7 @@
   <div class="karar karar-mail" data-rid="{{ rid }}" data-ref="{{ ref }}">
     {% if karar %}<span class="k-durum">{{ {'okundu': '✓ Okudum olarak işaretli', 'takip': '📌 Takibinizde', 'gereksiz': '✕ Gerek yok olarak işaretli'}[karar] }}</span>{% endif %}
     {% if karar != 'okundu' %}<button type="button" class="k-btn ok" data-karar="okundu">✓ Okudum</button>{% endif %}
-    {% if karar != 'takip' %}<button type="button" class="k-btn takip" data-karar="takip">📌 Takibe devam</button>{% endif %}
+    {% if karar != 'takip' %}<button type="button" class="k-btn takip" data-karar="takip">📌 Takip et</button>{% endif %}
     {% if karar != 'gereksiz' %}<button type="button" class="k-btn yok" data-karar="gereksiz">✕ Gerek yok</button>{% endif %}
     {% if karar %}<button type="button" class="k-btn" data-karar="geri">Geri al</button>{% endif %}
   </div>

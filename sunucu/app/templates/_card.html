@@ -13,7 +13,7 @@
     {% if c.refs and links[c.refs[0]|string] %}<a class="open" href="{{ links[c.refs[0]|string] }}" target="_blank" rel="noopener noreferrer">Outlook'ta aç ↗</a>{% endif %}
   </article>
 {% endmacro %}
-{# Özet panodaki tek satır: konunun tüm bilgisi burada; altında Okudum / Takibe devam / Gerek yok #}
+{# Özet panodaki tek satır: konunun tüm bilgisi burada; altında Okudum / Takip et / Gerek yok #}
 {% macro satir(c, links, rid, takipte=False) %}
   {% set rid2 = c._rid or rid %}
   {% set ref = c._ref if c._ref is not none else (c.refs or [None])[0] %}
@@ -26,6 +26,7 @@
       {% if c.ozet %}<span class="p-ozet">{{ c.ozet }}</span>{% endif %}
       {% if c.satir %}<span class="p-adim"><b>{{ c.satir_etiketi or 'Öneri' }}:</b> {{ c.satir }}</span>{% endif %}
       {% if c.alinti %}<span class="p-alinti">"{{ c.alinti }}"</span>{% endif %}
+      {% if c.analiz %}<span class="p-analiz"><b>🔍 İnceleme</b>{{ c.analiz }}</span>{% endif %}
       <span class="p-tags">{% for k in c.kisiler or [] %}<span class="kisi">{{ k }}</span>{% endfor %}{% for t in c.etiketler or [] %}<span class="{{ 'son' if 'son tarih' in t|lower }}">{{ t }}</span>{% endfor %}</span>
     </span>
     {% if oku %}<span class="p-go">Maili oku ›</span></a>{% else %}</div>{% endif %}
@@ -33,7 +34,7 @@
     {% if ref is not none %}
     <span class="karar">
       <button type="button" class="k-btn ok" data-karar="okundu">✓ Okudum</button>
-      {% if not takipte %}<button type="button" class="k-btn takip" data-karar="takip">📌 Takibe devam</button>{% endif %}
+      {% if not takipte %}<button type="button" class="k-btn takip" data-karar="takip">📌 Takip et</button>{% endif %}
       <button type="button" class="k-btn yok" data-karar="gereksiz">✕ Gerek yok</button>
     </span>
     {% endif %}

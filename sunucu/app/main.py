@@ -278,7 +278,7 @@ def _pano(r):
         return {}
     p = tekillestir(r["data"])
     kararlar = db.karar_hepsi()
-    for bolum in ("sikayet", "odeme", "vip", "ortak", "takip"):
+    for bolum in ("sikayet", "odeme", "vip", "kampanya", "ortak", "takip"):
         kalan = []
         for c in p.get(bolum, []):
             ref = (c.get("refs") or [None])[0]
@@ -421,11 +421,11 @@ async def mail_karar(request: Request):
     if durum == "geri":
         db.karar_sil(a)
         return {"ok": True}
-    kart = next((c for sec in ("sikayetler", "odeme", "oncelikli", "ortak", "aksiyon", "takip")
+    kart = next((c for sec in ("sikayetler", "odeme", "oncelikli", "kampanyalar", "ortak", "aksiyon", "takip")
                  for c in (r["data"].get(sec) or []) if [str(x) for x in (c.get("refs") or [])][:1] == [ref]), None)
     if kart is None:
         kart = next((dict(k["kart"]) for k in db.karar_hepsi().values() if str(k["ref"]) == ref and k["rid"] == rid), {"baslik": "Mail"})
-    ozet = {k: kart.get(k) for k in ("baslik", "kim", "zaman", "ozet", "satir_etiketi", "satir", "etiketler", "kisiler", "refs")}
+    ozet = {k: kart.get(k) for k in ("baslik", "kim", "zaman", "ozet", "satir_etiketi", "satir", "analiz", "etiketler", "kisiler", "refs")}
     db.karar_set(a, durum, rid, ref, ozet)
     return {"ok": True}
 

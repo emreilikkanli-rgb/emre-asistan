@@ -324,6 +324,11 @@
   .e-mini li small { color: var(--muted); font-size: 12px; }
   .e-mini li.yeni b { font-weight: 800; color: #ffe2a8; }
   @media (max-width: 520px) { .e-kart { grid-template-columns: 50px minmax(0, 1fr); gap: 10px; padding: 12px 14px; } }
+  .p-analiz { display: grid; gap: 2px; margin-top: 4px; padding: 9px 11px; border-radius: 10px; font-size: 13px; line-height: 1.45; color: #e9e6ff;
+    background: rgba(255,255,255,.05); border-left: 3px solid var(--c, var(--red)); }
+  .p-analiz b { font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--c, var(--red)); }
+  .m-ikonlar:not(.e-ikonlar) { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; }
+  @media (max-width: 720px) { .m-ikonlar:not(.e-ikonlar) { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; } }
   .karar-mail { padding: 4px 0 12px; align-items: center; }
   .k-durum { font-size: 13px; font-weight: 600; color: var(--muted); margin-right: 4px; }
   .karar { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 18px 12px; }
