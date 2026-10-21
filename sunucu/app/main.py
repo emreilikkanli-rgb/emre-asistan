@@ -12,7 +12,7 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import ajanda as ajanda_mod, auth, db, etkinlik, ews_gonder, jobs, moduller
+from . import ajanda as ajanda_mod, auth, db, etkinlik, ews_gonder, gundem, jobs, moduller
 from .analyze import tekillestir
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -43,6 +43,7 @@ def _uzun_tarih(iso):
 
 templates.env.filters["uzun_tarih"] = _uzun_tarih
 templates.env.globals["totp_enabled"] = auth.totp_enabled
+templates.env.filters["gun_no"] = lambda s: datetime.strptime(s[:10], "%Y-%m-%d").weekday()  # 0=Pazartesi
 
 
 @app.on_event("startup")
@@ -57,7 +58,7 @@ async def _security_headers(request: Request, call_next):
     resp = await call_next(request)
     resp.headers["Content-Security-Policy"] = (
         "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "font-src https://fonts.gstatic.com; img-src 'self' data:; script-src 'self' 'unsafe-inline'; "
+        "font-src https://fonts.gstatic.com; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; "
         "frame-ancestors 'none'; form-action 'self'; base-uri 'none'")
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["Referrer-Policy"] = "no-referrer"
@@ -228,6 +229,7 @@ def ana(request: Request):
                                 if e.get("yeni") and (e.get("bitis_tarihi") or e["tarih"]) >= simdi.date().isoformat()]),
     }
     etkinlik.baslat()  # sabah ilk açılışta (o gün tarama yoksa) etkinlikler arka planda taranır
+    gundem.hepsini_tazele()  # haberler, piyasalar, hava: süresi dolanlar arka planda (ücretsiz)
     parcalar = []
     if rozet["ajanda"]:
         parcalar.append("ajandada %d iş" % rozet["ajanda"])
@@ -288,6 +290,84 @@ def _pano(r):
         p[bolum] = kalan
     p["takipte"] = [dict(k["kart"], _ref=k["ref"], _rid=k["rid"], _takip_at=k["at"]) for k in db.karar_liste("takip", limit=200, gun=3650)]
     return p
+
+
+# ---------- Gündem: haberler, piyasalar, hava ----------
+def _once(iso, simdi):
+    if not iso:
+        return ""
+    try:
+        d = datetime.fromisoformat(iso)
+    except ValueError:
+        return ""
+    dk = int((simdi - d).total_seconds() // 60)
+    if dk < 1:
+        return "az önce"
+    if dk < 60:
+        return "%d dk önce" % dk
+    if dk < 24 * 60:
+        return "%d saat önce" % (dk // 60)
+    yerel = d.astimezone(TZ)
+    return "%d %s %s" % (yerel.day, AYLAR[yerel.month - 1][:3], yerel.strftime("%H:%M"))
+
+
+def _gundem_sayfa(request, sid, modul, sablon):
+    k = gundem.getir(modul, bekle=True)  # yalnızca hiç veri yoksa (ilk açılış) bekler
+    simdi = datetime.now(timezone.utc)
+    veri = (k or {}).get("data") or {}
+    simdi_iso = simdi.isoformat()
+    for b in veri.get("bolumler") or []:
+        for h in b["haberler"]:
+            if h.get("tarih") and h["tarih"] > simdi_iso:  # ileri tarihli yayın saati (bazı akışlarda): şimdi say
+                h["tarih"] = simdi_iso
+            h["once"] = _once(h.get("tarih"), simdi)
+    if veri.get("bolumler"):  # Son dakika: her kaynaktan en yeni tek haber, en yeni 6 kaynak
+        enyeni = {}
+        for b in veri["bolumler"]:
+            for h in b["haberler"]:
+                if h.get("tarih") and (h["kaynak"] not in enyeni or h["tarih"] > enyeni[h["kaynak"]]["tarih"]):
+                    enyeni[h["kaynak"]] = h
+        veri["son"] = sorted(enyeni.values(), key=lambda h: h["tarih"], reverse=True)[:6]
+    return _page(request, sablon, sid, m=moduller.BY_SLUG[modul], veri=veri, at=(k or {}).get("at", ""),
+                 guncel_once=_once((k or {}).get("at"), simdi), yenileniyor=gundem.calisiyor(modul) or gundem.eski_mi(modul),
+                 hava_kod=gundem.HAVA_KOD, modul=modul)
+
+
+@app.get("/gundem/{modul}", response_class=HTMLResponse)
+def gundem_haber(request: Request, modul: str):
+    sid, redir = _guard(request)
+    if redir:
+        return redir
+    if modul not in gundem.HABER:
+        return RedirectResponse("/", status_code=303)
+    return _gundem_sayfa(request, sid, modul, "haberler.html")
+
+
+@app.get("/piyasalar", response_class=HTMLResponse)
+def piyasalar(request: Request):
+    sid, redir = _guard(request)
+    if redir:
+        return redir
+    return _gundem_sayfa(request, sid, "piyasalar", "piyasalar.html")
+
+
+@app.get("/hava", response_class=HTMLResponse)
+def hava(request: Request):
+    sid, redir = _guard(request)
+    if redir:
+        return redir
+    return _gundem_sayfa(request, sid, "hava", "hava.html")
+
+
+@app.get("/api/gundem-durum/{modul}")
+def gundem_durum(request: Request, modul: str):
+    _, err = _api_guard(request)
+    if err:
+        return err
+    if modul not in gundem.SURE_DK:
+        return PlainTextResponse("Bilinmeyen modül", status_code=404)
+    k = db.gundem_oku(modul)
+    return {"at": (k or {}).get("at", ""), "calisiyor": gundem.calisiyor(modul)}
 
 
 # ---------- Kıbrıs Etkinlikleri ----------

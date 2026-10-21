@@ -47,6 +47,7 @@ def init():
         CREATE TABLE IF NOT EXISTS kimlik (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS etkinlik_rapor (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL,
             status TEXT NOT NULL, error TEXT, data TEXT, cost REAL DEFAULT 0);
+        CREATE TABLE IF NOT EXISTS gundem_cache (modul TEXT PRIMARY KEY, at TEXT NOT NULL, data TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS etkinlik_gorulen (anahtar TEXT PRIMARY KEY, ilk TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS mail_karar (anahtar TEXT PRIMARY KEY, durum TEXT NOT NULL, at TEXT NOT NULL,
             rid INTEGER, ref TEXT, kart TEXT NOT NULL);
@@ -273,3 +274,16 @@ def etkinlik_gorulen_isle(anahtarlar, bugun):
         q = ",".join("?" * len(anahtarlar))
         ilk = dict(c.execute("SELECT anahtar, ilk FROM etkinlik_gorulen WHERE anahtar IN (%s)" % q, list(anahtarlar)).fetchall()) if anahtarlar else {}
     return ilk, onceki
+
+
+# Gündem modülleri (haberler, piyasalar, hava) önbelleği
+def gundem_kaydet(modul, veri):
+    with _lock, _conn() as c:
+        c.execute("INSERT INTO gundem_cache(modul, at, data) VALUES(?,?,?) ON CONFLICT(modul) DO UPDATE SET at=excluded.at, data=excluded.data",
+                  (modul, datetime.now(timezone.utc).isoformat(), json.dumps(veri, ensure_ascii=False)))
+
+
+def gundem_oku(modul):
+    with _conn() as c:
+        r = c.execute("SELECT at, data FROM gundem_cache WHERE modul=?", (modul,)).fetchone()
+    return {"at": r["at"], "data": json.loads(r["data"])} if r else None

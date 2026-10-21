@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Hava Durumu · Emre'nin Asistanı{% endblock %}
+{% block body %}
+{% set aktif = 'gundem' %}{% include "_nav.html" %}
+{% set GUN = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'] %}
+{% macro kod(k) %}{{ (hava_kod.get(k) or ('—', '🌡'))[1] }}{% endmacro %}
+{% macro ad(k) %}{{ (hava_kod.get(k) or ('—', ''))[0] }}{% endmacro %}
+
+<header>
+  <p class="hub-sub" style="margin:0 0 4px">Emre'nin Asistanı · Gündem</p>
+  <h1>Emre'nin Hava Durumu</h1>
+  <p>KKTC ve İstanbul · 5 günlük tahmin{% if guncel_once %} · güncelleme {{ guncel_once }}{% endif %}</p>
+</header>
+{% include "_gundem_durum.html" %}
+
+{% if not veri.sehirler %}<div class="note">Hava durumu şu an alınamadı. Biraz sonra yenileyin.</div>{% endif %}
+<section class="hv-izgara">
+  {% for s in veri.sehirler or [] %}
+  <article class="hv-kart">
+    <div class="hv-ust">
+      <div><b class="hv-sehir">{{ s.ad }}</b><span class="hv-durum">{{ ad(s.kod) }}</span></div>
+      <span class="hv-simge" aria-hidden="true">{{ kod(s.kod) }}</span>
+    </div>
+    <div class="hv-sicak">{{ s.sicaklik|round|int if s.sicaklik is not none else '—' }}°</div>
+    <div class="hv-detay">Hissedilen {{ s.hissedilen|round|int if s.hissedilen is not none else '—' }}° · Nem %{{ s.nem if s.nem is not none else '—' }} · Rüzgâr {{ s.ruzgar|round|int if s.ruzgar is not none else '—' }} km/sa</div>
+    <ul class="hv-gunler">
+      {% for g in s.gunler %}
+      <li><span>{{ 'Bugün' if loop.first else GUN[(g.tarih | string)[:10] | gun_no] }}</span><span aria-hidden="true">{{ kod(g.kod) }}</span>
+        <span class="hv-mm"><b>{{ g.max|round|int }}°</b> {{ g.min|round|int }}°</span>{% if g.yagis %}<small>💧%{{ g.yagis }}</small>{% endif %}</li>
+      {% endfor %}
+    </ul>
+  </article>
+  {% endfor %}
+</section>
+<footer>Veriler Open-Meteo'dan alınır, en sık 30 dakikada bir yenilenir.</footer>
+{% endblock %}

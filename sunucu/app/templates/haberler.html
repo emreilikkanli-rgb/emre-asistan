@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ m.ust }} {{ m.ad }} · Emre'nin Asistanı{% endblock %}
+{% block body %}
+{% from "_ikonlar.html" import ikon %}
+{% set aktif = 'gundem' %}{% include "_nav.html" %}
+{% set IKON = {'turkiye': 'turkiye', 'kktc': 'kktc', 'turizm': 'turizm', 'turkce': 'turkce', 'dunya': 'dunya-haberleri'} %}
+{% set RENK = {'turkiye': 'red', 'kktc': 'orange', 'turizm': 'teal', 'turkce': 'violet', 'dunya': 'blue'} %}
+
+{% macro haber(h) %}
+  <li><a class="h-kart" href="{{ h.url }}" target="_blank" rel="noopener noreferrer">
+    {% if h.gorsel %}<img class="h-gorsel" src="{{ h.gorsel }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}
+    <span class="h-govde">
+      <b>{{ h.baslik }}</b>
+      <span class="h-meta"><span class="h-kaynak">{{ h.kaynak }}</span>{% if h.once %} · {{ h.once }}{% endif %}</span>
+      {% if h.ozet and h.ozet|lower != h.baslik|lower %}<span class="h-ozet">{{ h.ozet }}</span>{% endif %}
+    </span>
+  </a></li>
+{% endmacro %}
+
+<header>
+  <p class="hub-sub" style="margin:0 0 4px">Emre'nin Asistanı · Gündem</p>
+  <h1>{{ m.ust }} {{ m.ad }}</h1>
+  <p>{{ m.aciklama }}{% if guncel_once %} · güncelleme {{ guncel_once }}{% endif %}{% if veri.toplam_kaynak %} · {{ veri.calisan_kaynak }}/{{ veri.toplam_kaynak }} kaynak{% endif %}</p>
+</header>
+{% include "_gundem_durum.html" %}
+
+{% if not veri.bolumler %}
+  <div class="note">Haberler alınamadı. Biraz sonra sayfayı yenileyin.</div>
+{% else %}
+<nav class="m-ikonlar e-ikonlar" aria-label="Haber bölümleri">
+  {% for b in veri.bolumler %}
+  <button class="uygulama {{ 'bos' if not b.haberler }}" type="button" data-hedef="h-{{ b.id }}" aria-controls="h-{{ b.id }}" aria-expanded="false" style="--sira: {{ loop.index0 }}">
+    <span class="kap">{{ ikon(IKON[b.id]) }}</span>
+    <span class="etiket"><small>{{ b.kaynaklar|length }} kaynak</small>{{ b.ad }}</span>
+  </button>
+  {% endfor %}
+</nav>
+
+{% set son = veri.son or [] %}
+{% if son %}
+<section class="e-ozet" aria-label="Son dakika">
+  <div class="e-ozet-ust"><b>⚡ Son dakika</b><span>her kaynaktan en yeni haber</span></div>
+  <ul class="h-liste h-kisa">{% for h in son %}{{ haber(h) }}{% endfor %}</ul>
+</section>
+{% endif %}
+
+<div class="m-paneller">
+  {% for b in veri.bolumler %}
+  <section class="p-card m-panel" id="h-{{ b.id }}" hidden style="--c: var(--{{ RENK[b.id] }}); --cbg: var(--{{ RENK[b.id] }}-bg)" aria-label="{{ b.ad }}">
+    <header class="p-head">
+      <span class="p-baslik"><b>{{ b.ad }}</b><small>{{ b.kaynaklar | join(' · ') }}</small></span>
+      <span class="p-say">{{ b.haberler|length }}</span>
+      <button class="p-kapat" type="button" data-kapat aria-label="Kapat">✕</button>
+    </header>
+    {% if b.haberler %}<ul class="h-liste">{% for h in b.haberler %}{{ haber(h) }}{% endfor %}</ul>
+    {% else %}<p class="p-bos">Bu bölümde şu an haber alınamadı.</p>{% endif %}
+  </section>
+  {% endfor %}
+</div>
+{% endif %}
+<footer>Başlık ve kısa özetler sitelerin kendi RSS akışlarından alınır; habere dokununca yayıncının sitesinde açılır. Haberler en sık {{ 20 if modul == 'tr-haberler' else 30 }} dakikada bir yenilenir.</footer>
+
+<script>
+  (function () {
+    var dugmeler = document.querySelectorAll('.e-ikonlar [data-hedef]');
+    function goster(pid, kaydir) {
+      dugmeler.forEach(function (b) { var acik = b.dataset.hedef === pid; b.setAttribute('aria-expanded', String(acik)); document.getElementById(b.dataset.hedef).hidden = !acik; });
+      if (pid && kaydir) document.getElementById(pid).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    dugmeler.forEach(function (b) { b.addEventListener('click', function () { goster(b.getAttribute('aria-expanded') === 'true' ? '' : b.dataset.hedef, true); }); });
+    document.querySelectorAll('[data-kapat]').forEach(function (k) { k.addEventListener('click', function () { goster('', false); }); });
+  })();
+</script>
+{% endblock %}

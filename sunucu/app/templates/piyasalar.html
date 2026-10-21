@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Piyasalar · Emre'nin Asistanı{% endblock %}
+{% block body %}
+{% set aktif = 'gundem' %}{% include "_nav.html" %}
+{% macro sayi(x, ond=2) %}{{ ("{:,.%df}" % ond).format(x).replace(",", "X").replace(".", ",").replace("X", ".") }}{% endmacro %}
+{% set c = veri.canli or {} %}
+{% set KUTU = [
+  ('USD', 'Dolar', 'USD/TL', '₺', 4, '$'), ('EUR', 'Euro', 'EUR/TL', '₺', 4, '€'), ('GBP', 'Sterlin', 'GBP/TL', '₺', 4, '£'),
+  ('GRAM', 'Gram altın', 'TL / gram', '₺', 0, '🟡'), ('ONS', 'Ons altın', 'USD / ons', '$', 2, '🥇'), ('BRENT', 'Brent petrol', 'USD / varil', '$', 2, '🛢'),
+  ('BIST', 'BIST 100', 'Borsa İstanbul endeksi', '', 2, '📈'),
+] %}
+
+<header>
+  <p class="hub-sub" style="margin:0 0 4px">Emre'nin Asistanı · Gündem</p>
+  <h1>Emre'nin Piyasaları</h1>
+  <p>Döviz, altın, petrol ve borsa{% if guncel_once %} · güncelleme {{ guncel_once }}{% endif %}</p>
+</header>
+{% include "_gundem_durum.html" %}
+
+<section class="pz-izgara">
+  {% for k, ad, alt, birim, ond, simge in KUTU %}
+  {% set v = c.get(k) %}
+  <article class="pz-kutu">
+    <div class="pz-ust"><span class="pz-simge">{{ simge }}</span><span><b>{{ ad }}</b><small>{{ alt }}</small></span></div>
+    {% if v %}
+      <div class="pz-fiyat">{{ birim }}{{ sayi(v.fiyat, ond) }}</div>
+      {% if v.degisim is not none %}<div class="pz-degisim {{ 'art' if v.degisim > 0 else 'dus' if v.degisim < 0 else '' }}">{{ '▲' if v.degisim > 0 else '▼' if v.degisim < 0 else '•' }} %{{ sayi(v.degisim|abs, 2) }} <small>bugün</small></div>{% endif %}
+    {% else %}<div class="pz-fiyat yok">—</div><div class="pz-degisim">şu an alınamadı</div>{% endif %}
+  </article>
+  {% endfor %}
+</section>
+
+{% if veri.tcmb %}
+<section class="e-ozet">
+  <div class="e-ozet-ust"><b>🏛 TCMB resmî kurları</b><span>{{ veri.tcmb.tarih }} · döviz alış / satış</span></div>
+  <table class="pz-tablo">
+    <thead><tr><th></th><th>Alış</th><th>Satış</th></tr></thead>
+    <tbody>{% for k, ad in (('USD', 'ABD doları'), ('EUR', 'Euro'), ('GBP', 'İngiliz sterlini')) %}{% if veri.tcmb.get(k) %}
+      <tr><td>{{ ad }}</td><td>₺{{ sayi(veri.tcmb[k].alis, 4) }}</td><td>₺{{ sayi(veri.tcmb[k].satis, 4) }}</td></tr>{% endif %}{% endfor %}</tbody>
+  </table>
+</section>
+{% endif %}
+<footer>Anlık fiyatlar Yahoo Finance'ten (gecikmeli olabilir), resmî kurlar Türkiye Cumhuriyet Merkez Bankası'ndan alınır. Gram altın, ons fiyatı ve dolar kurundan hesaplanır; kuyumcu fiyatından farklı olabilir. Yatırım tavsiyesi değildir. En sık 10 dakikada bir yenilenir.</footer>
+{% endblock %}

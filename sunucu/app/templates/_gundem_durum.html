@@ -1,0 +1,20 @@
+{# Gündem sayfaları: veri eskiyse arka planda yenilenir; bitince "Yeni verileri göster" düğmesi çıkar, sayfa kendiliğinden atlamaz #}
+<div class="guncel {{ 'on' if yenileniyor }}" id="gDurum" role="status">{% if yenileniyor %}<span class="spin"></span>Arka planda güncelleniyor; aşağıda son veriler gösteriliyor.{% endif %}</div>
+<script>
+  (function () {
+    var kutu = document.getElementById('gDurum'), ilk = '{{ at }}', z = null;
+    if (!kutu.classList.contains('on')) return;
+    function izle() {
+      fetch('/api/gundem-durum/{{ modul }}', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.at && d.at !== ilk) {
+          kutu.className = 'guncel on';
+          kutu.innerHTML = 'Yeni veriler hazır. <button type="button" class="btn primary" style="margin-left:auto" onclick="location.replace(location.pathname)">Göster</button>';
+          return;
+        }
+        if (d.calisiyor) { z = setTimeout(izle, 3000); return; }
+        kutu.className = 'guncel'; kutu.textContent = '';
+      }).catch(function () { z = setTimeout(izle, 6000); });
+    }
+    z = setTimeout(izle, 2000);
+  })();
+</script>
