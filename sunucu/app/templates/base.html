@@ -346,6 +346,37 @@
   .toast.on { transform: translate(-50%, 0); }
   .toast button { font: inherit; font-weight: 700; color: #b8adff; background: none; border: 0; cursor: pointer; padding: 0; white-space: nowrap; }
   @media (max-width: 420px) { .hub-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  /* Kişisel modüller: Notlar, Rotalar, Hobiler, Sağlık */
+  .m-ikonlar.k-ikonlar { grid-template-columns: repeat(var(--sutun, 4), minmax(0, 1fr)) !important; max-width: calc(var(--sutun, 4) * 150px); margin-left: auto; margin-right: auto; }
+  .m-panel .p-head:has(.btn) { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .m-panel .p-head .btn { padding: 6px 12px; font-size: 13px; }
+  .k-kart { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 12px 18px; }
+  .k-kart.sabit { background: linear-gradient(90deg, var(--cbg), transparent 70%); }
+  .k-kart.soluk .k-govde { opacity: .6; }
+  .k-govde { display: grid; gap: 3px; min-width: 0; }
+  .k-govde b { font-size: 15px; overflow-wrap: anywhere; }
+  .k-meta { font-size: 12.5px; color: #d6d2ee; overflow-wrap: anywhere; }
+  .k-meta small { color: var(--muted); font-size: 12px; }
+  .k-meta a { color: var(--c); font-weight: 600; }
+  .k-metin { font-size: 13.5px; color: #cfcaea; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .k-etiket { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--gray-bg); color: var(--muted); vertical-align: 2px; }
+  .k-kart .karar { padding: 0; }
+  .k-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px 14px; padding: 14px 18px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.03); }
+  .k-form .row { grid-column: 1 / -1; }
+  .k-alan { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+  .k-alan:has(textarea) { grid-column: 1 / -1; }
+  .k-alan input, .k-alan select, .k-alan textarea, .k-hedef input { font: inherit; font-size: 15px; color: var(--text); background: rgba(255,255,255,.06); border: 1px solid var(--line);
+    border-radius: 10px; padding: 9px 11px; width: 100%; box-sizing: border-box; color-scheme: dark; }
+  .k-alan input:focus, .k-alan select:focus, .k-alan textarea:focus { outline: 2px solid var(--c); outline-offset: 0; }
+  .k-onay { display: flex; gap: 8px; align-items: center; font-size: 14px; align-self: end; padding-bottom: 8px; }
+  .k-hafta { display: grid; gap: 7px; margin-top: 12px; }
+  .k-hafta-satir { display: grid; grid-template-columns: 96px minmax(0, 1fr) 64px; gap: 10px; align-items: center; font-size: 12.5px; color: var(--muted); }
+  .k-hafta-satir b { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+  .k-bar { height: 8px; border-radius: 999px; background: var(--gray-bg); overflow: hidden; }
+  .k-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ff8a80, #ffd166); }
+  .k-hedef { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; font-size: 12.5px; color: var(--muted); }
+  .k-hedef input { width: 80px; padding: 5px 8px; font-size: 14px; }
+  @media (max-width: 520px) { .k-kart, .k-form { padding: 12px 14px; } }
 </style>
 </head>
 <body>

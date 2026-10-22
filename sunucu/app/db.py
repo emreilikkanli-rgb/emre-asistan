@@ -174,7 +174,7 @@ def fail_clear(ip):
 
 
 # Ajanda belgeleri (items, gorevler, plans): claude.ai ajandasıyla aynı yapı
-DOC_COLLECTIONS = ("items", "gorevler", "plans", "ayarlar")
+DOC_COLLECTIONS = ("items", "gorevler", "plans", "ayarlar", "notlar", "rotalar", "hobiler", "saglik")  # son dördü kişisel modüller
 
 
 def doc_list(collection):

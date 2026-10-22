@@ -12,7 +12,7 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import ajanda as ajanda_mod, auth, db, etkinlik, ews_gonder, gundem, jobs, moduller
+from . import ajanda as ajanda_mod, auth, db, etkinlik, ews_gonder, gundem, jobs, kisisel, moduller
 from .analyze import tekillestir
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -290,6 +290,21 @@ def _pano(r):
         p[bolum] = kalan
     p["takipte"] = [dict(k["kart"], _ref=k["ref"], _rid=k["rid"], _takip_at=k["at"]) for k in db.karar_liste("takip", limit=200, gun=3650)]
     return p
+
+
+# ---------- Kişisel modüller: Notlar, Rotalar, Hobiler, Sağlık ve Spor ----------
+@app.get("/k/{modul}", response_class=HTMLResponse)
+def kisisel_sayfa(request: Request, modul: str):
+    sid, redir = _guard(request)
+    if redir:
+        return redir
+    if modul not in kisisel.MODULLER:
+        return RedirectResponse("/", status_code=303)
+    cfg = kisisel.MODULLER[modul]
+    liste = kisisel.kayitlar(modul)
+    bolumler = [dict(b, alanlar=kisisel.alanlar(modul, b["id"])) for b in cfg["bolumler"]]
+    return _page(request, "kisisel.html", sid, modul=modul, cfg=cfg, bolumler=bolumler, liste=liste,
+                 ozet=kisisel.ozet(modul, liste, datetime.now(TZ).date()), bugun=datetime.now(TZ).date().isoformat())
 
 
 # ---------- Gündem: haberler, piyasalar, hava ----------

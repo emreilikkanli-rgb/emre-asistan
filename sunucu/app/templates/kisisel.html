@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}{{ cfg.ust }} {{ cfg.ad }} · Emre'nin Asistanı{% endblock %}
+{% block body %}
+{% from "_ikonlar.html" import ikon %}
+{% set aktif = 'kisisel' %}{% include "_nav.html" %}
+{% set AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'] %}
+{% macro tarihk(t) %}{% if t %}{{ t[8:10]|int }} {{ AY[t[5:7]|int - 1] }}{% endif %}{% endmacro %}
+
+<header>
+  <p class="hub-sub" style="margin:0 0 4px">Emre'nin Asistanı · Kişisel</p>
+  <h1>{{ cfg.ust }} {{ cfg.ad }}</h1>
+</header>
+
+<nav class="m-ikonlar e-ikonlar k-ikonlar" aria-label="Bölümler" style="--sutun: {{ bolumler|length }}">
+  {% for b in bolumler %}
+  {% set sayi = liste | selectattr('bolum', 'equalto', b.id) | list | length %}
+  <button class="uygulama {{ 'bos' if not sayi }}" type="button" data-hedef="k-{{ b.id }}" aria-controls="k-{{ b.id }}" aria-expanded="false" style="--sira: {{ loop.index0 }}">
+    <span class="kap">{{ ikon(b.ikon) }}<span class="rozet" {{ '' if sayi else 'hidden' }}>{{ sayi }}</span></span>
+    <span class="etiket"><small>{{ cfg.ust }}</small>{{ b.ad }}</span>
+  </button>
+  {% endfor %}
+</nav>
+
+{% if ozet %}
+<section class="e-ozet" aria-label="Özet">
+  <div class="e-ozet-ust"><b>Özet</b>{% if ozet.vurgu %}<span>{{ ozet.vurgu }}</span>{% endif %}</div>
+  <div class="e-sayilar">{% for ad, n in ozet.sayilar %}<span><b>{{ n }}</b> {{ ad|lower }}</span>{% endfor %}</div>
+  {% if ozet.haftalar %}
+  <div class="k-hafta">
+    {% for h in ozet.haftalar %}
+    <div class="k-hafta-satir"><span>{{ h.ad }}</span><span class="k-bar"><i style="width: {{ h.yuzde }}%"></i></span><b>{{ h.dk }} dk</b></div>
+    {% endfor %}
+    <form class="k-hedef" id="hedefForm"><label>Haftalık hedef <input type="number" min="0" step="10" name="dk" value="{{ ozet.hedef }}"> dk</label><button class="k-btn" type="submit">Kaydet</button></form>
+  </div>
+  {% endif %}
+  {% if ozet.liste %}
+  <p class="e-ozet-baslik">{{ ozet.liste_baslik }}</p>
+  <ul class="e-mini">{% for k in ozet.liste %}<li><span class="t">{{ tarihk(k.baslangic or k.tarih) or '—' }}{% if k.saat %} · {{ k.saat }}{% endif %}</span>
+    <span class="n">{% if k.sabit %}📌 {% endif %}<b>{{ k.baslik or k.tur or 'Kayıt' }}</b>{% if k.yer %} — {{ k.yer }}{% endif %}{% if k.sure %} — {{ k.sure }} dk{% endif %}</span>
+    <small>{{ (k.metin or k['not'] or k.kim or k.durum or '')[:90] }}</small></li>{% endfor %}</ul>
+  {% elif not liste %}<p class="p-bos" style="padding:8px 0 0">Henüz kayıt yok. Bir ikona dokunup ilk kaydınızı ekleyin.</p>{% endif %}
+</section>
+{% endif %}
+
+<div class="m-paneller" id="paneller"></div>
+<footer>Kayıtlar yalnızca sizin hesabınızda, sunucu veritabanında saklanır.</footer>
+
+<script>
+(function () {
+  var MODUL = {{ modul|tojson }}, BOLUMLER = {{ bolumler|tojson }}, LISTE = {{ liste|tojson }}, KAYIT = {{ cfg.kayit|tojson }};
+  var SIRALA = {{ cfg.sirala|tojson }}, BUGUN = {{ bugun|tojson }}, CSRF = '{{ csrf }}';
+  var AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+  var RENK = { amber: 'amber', violet: 'violet', teal: 'teal', blue: 'blue', red: 'red', orange: 'orange' };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var tarih = function (t) { return t ? (+t.slice(8, 10)) + ' ' + AY[+t.slice(5, 7) - 1] + (t.slice(0, 4) !== BUGUN.slice(0, 4) ? ' ' + t.slice(0, 4) : '') : ''; };
+  var yeniId = function (b) { return b + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); };
+
+  function api(yontem, id, govde) {
+    return fetch('/api/db/' + MODUL + '/' + encodeURIComponent(id), { method: yontem, credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF }, body: govde ? JSON.stringify(govde) : undefined })
+      .then(function (r) { if (r.status === 401) { location.href = '/giris'; throw new Error(); } if (!r.ok) throw new Error('HTTP ' + r.status); });
+  }
+  function sirala(a, b) {
+    if (a.sabit !== b.sabit) return a.sabit ? -1 : 1;
+    if (SIRALA === 'durum') { var s = { 'Devam ediyor': 0, 'Yapılacak': 1, '': 1, 'Bitti': 2 }; var d = (s[a.durum || ''] || 1) - (s[b.durum || ''] || 1); if (d) return d; }
+    if (SIRALA === 'baslangic') {
+      var ga = (a.bitis || a.baslangic || '9') < BUGUN, gb = (b.bitis || b.baslangic || '9') < BUGUN;  // geçmiş seyahatler sona
+      if (ga !== gb) return ga ? 1 : -1;
+      return ga ? (b.baslangic || '').localeCompare(a.baslangic || '') : (a.baslangic || '9').localeCompare(b.baslangic || '9');
+    }
+    var alan = SIRALA.replace('-', ''), ters = SIRALA[0] === '-';
+    var x = (a[alan] || a.guncelleme || ''), y = (b[alan] || b.guncelleme || '');
+    return ters ? y.localeCompare(x) : x.localeCompare(y);
+  }
+  function deger(f, k) {
+    var v = k[f[0]];
+    if (v == null || v === '' || v === false) return '';
+    if (f[2] === 'tarih') return tarih(v);
+    if (f[2] === 'onay') return '✓ ' + f[1];
+    if (f[2] === 'baglanti') return '<a href="' + esc(v) + '" target="_blank" rel="noopener noreferrer">Bağlantıyı aç ↗</a>';
+    if (f[0] === 'puan') return '★★★★★'.slice(0, +v) + '☆☆☆☆☆'.slice(0, 5 - (+v));
+    return esc(v);
+  }
+  function kart(b, k) {
+    var f = b.alanlar, bas = k.baslik || k.tur || 'Kayıt', meta = [], ek = '';
+    f.forEach(function (a) {
+      if (['baslik', 'not', 'metin', 'tur', 'sabit'].indexOf(a[0]) >= 0) return;
+      var d = deger(a, k); if (d) meta.push((a[2] === 'onay' || a[0] === 'puan' || a[2] === 'baglanti') ? d : '<small>' + esc(a[1]) + ':</small> ' + d);
+    });
+    var gecmis = b.id === 'seyahat' && (k.bitis || k.baslangic || '9') < BUGUN;
+    var metin = k.metin || k.not || '';
+    return '<li class="k-kart' + (k.sabit ? ' sabit' : '') + (gecmis || k.tamam || k.durum === 'Bitti' ? ' soluk' : '') + '" data-id="' + esc(k.id) + '">' +
+      '<div class="k-govde"><b>' + (k.sabit ? '📌 ' : '') + esc(bas) + (gecmis ? ' <small class="k-etiket">gezildi</small>' : '') + '</b>' +
+      (meta.length ? '<span class="k-meta">' + meta.join(' · ') + '</span>' : '') + (metin ? '<span class="k-metin">' + esc(metin) + '</span>' : '') + '</div>' +
+      '<span class="karar"><button type="button" class="k-btn" data-duzenle="' + esc(k.id) + '">Düzenle</button>' +
+      '<button type="button" class="k-btn yok" data-sil="' + esc(k.id) + '">Sil</button></span></li>';
+  }
+  function form(b, k) {
+    k = k || {};
+    var alanlar = b.alanlar.map(function (a) {
+      var ad = 'f_' + a[0], v = k[a[0]];
+      if (v == null && a[3] === 'bugun') v = BUGUN;
+      var giris;
+      if (a[2] === 'uzun') giris = '<textarea name="' + a[0] + '" id="' + ad + '" rows="3">' + esc(v || '') + '</textarea>';
+      else if (a[2] === 'secim') giris = '<select name="' + a[0] + '" id="' + ad + '">' + a[3].split('|').map(function (o) { return '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
+      else if (a[2] === 'onay') return '<label class="k-onay"><input type="checkbox" name="' + a[0] + '"' + (v ? ' checked' : '') + '> ' + esc(a[1]) + '</label>';
+      else giris = '<input name="' + a[0] + '" id="' + ad + '" type="' + ({ tarih: 'date', saat: 'time', sayi: 'number', baglanti: 'url' }[a[2]] || 'text') + '"' +
+        (a[2] === 'sayi' ? ' step="any" min="0"' : '') + ' value="' + esc(v == null ? '' : v) + '" placeholder="' + esc(a[3] && a[3] !== 'bugun' ? a[3] : '') + '">';
+      return '<label class="k-alan" for="' + ad + '"><span>' + esc(a[1]) + '</span>' + giris + '</label>';
+    }).join('');
+    return '<form class="k-form" data-bolum="' + esc(b.id) + '" data-id="' + esc(k.id || '') + '">' + alanlar +
+      '<div class="row"><button class="btn primary" type="submit">' + (k.id ? 'Kaydet' : 'Ekle') + '</button><button class="btn" type="button" data-vazgec>Vazgeç</button></div></form>';
+  }
+  function ciz() {
+    document.getElementById('paneller').innerHTML = BOLUMLER.map(function (b) {
+      var ks = LISTE.filter(function (k) { return k.bolum === b.id; }).sort(sirala);
+      return '<section class="p-card m-panel" id="k-' + b.id + '" hidden style="--c: var(--' + RENK[b.renk] + '); --cbg: var(--' + RENK[b.renk] + '-bg)">' +
+        '<header class="p-head"><span class="p-baslik"><b>' + esc(b.ad) + '</b><small>' + ks.length + ' ' + esc(KAYIT) + '</small></span>' +
+        '<button class="btn primary" type="button" data-ekle="' + esc(b.id) + '">+ Ekle</button><button class="p-kapat" type="button" data-kapat aria-label="Kapat">✕</button></header>' +
+        '<div class="k-formyer"></div>' +
+        (ks.length ? '<ul class="h-liste">' + ks.map(function (k) { return kart(b, k); }).join('') + '</ul>' : '<p class="p-bos">Bu bölümde henüz kayıt yok. "+ Ekle" ile başlayın.</p>') + '</section>';
+    }).join('');
+  }
+  ciz();
+
+  var dugmeler = document.querySelectorAll('.k-ikonlar [data-hedef]');
+  function goster(pid, kaydir) {
+    dugmeler.forEach(function (b) { var acik = b.dataset.hedef === pid; b.setAttribute('aria-expanded', String(acik)); document.getElementById(b.dataset.hedef).hidden = !acik; });
+    if (pid) try { sessionStorage.setItem('k-' + MODUL, pid); } catch (e) {}
+    if (pid && kaydir) document.getElementById(pid).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  dugmeler.forEach(function (b) { b.addEventListener('click', function () { goster(b.getAttribute('aria-expanded') === 'true' ? '' : b.dataset.hedef, true); }); });
+  try { var acik = sessionStorage.getItem('k-' + MODUL); if (acik && document.getElementById(acik)) goster(acik, false); } catch (e) {}
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('button'); if (!t) return;
+    if (t.hasAttribute('data-kapat')) { goster('', false); return; }
+    if (t.hasAttribute('data-vazgec')) { t.closest('.k-formyer').innerHTML = ''; return; }
+    if (t.dataset.ekle || t.dataset.duzenle) {
+      var panel = t.closest('.m-panel'), b = BOLUMLER.filter(function (x) { return 'k-' + x.id === panel.id; })[0];
+      var k = t.dataset.duzenle ? LISTE.filter(function (x) { return x.id === t.dataset.duzenle; })[0] : null;
+      var yer = panel.querySelector('.k-formyer'); yer.innerHTML = form(b, k);
+      var ilk = yer.querySelector('input, textarea, select'); if (ilk) ilk.focus();
+      yer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    if (t.dataset.sil) {
+      if (!confirm('Bu kayıt silinsin mi?')) return;
+      api('DELETE', t.dataset.sil).then(function () { location.reload(); }).catch(function () { alert('Silinemedi, bağlantınızı kontrol edin.'); });
+    }
+  });
+  document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (f.id === 'hedefForm') {
+      e.preventDefault();
+      fetch('/api/db/plans/saglik-hedef', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+        body: JSON.stringify({ dk: String(Math.max(0, parseInt(f.dk.value || '0', 10))) }) }).then(function () { location.reload(); });
+      return;
+    }
+    if (!f.classList.contains('k-form')) return;
+    e.preventDefault();
+    var b = BOLUMLER.filter(function (x) { return x.id === f.dataset.bolum; })[0], id = f.dataset.id || yeniId(b.id);
+    var eski = LISTE.filter(function (x) { return x.id === id; })[0] || {}, simdi = new Date().toISOString();
+    var govde = { bolum: b.id, olusturma: eski.olusturma || simdi, guncelleme: simdi };
+    b.alanlar.forEach(function (a) {
+      var el = f.elements[a[0]]; if (!el) return;
+      govde[a[0]] = a[2] === 'onay' ? el.checked : el.value.trim();
+    });
+    var zorunlu = b.alanlar[0];
+    if (zorunlu[2] !== 'onay' && !govde[zorunlu[0]]) { f.elements[zorunlu[0]].focus(); return; }
+    f.querySelector('button[type=submit]').disabled = true;
+    api('PUT', id, govde).then(function () { location.reload(); }).catch(function () { f.querySelector('button[type=submit]').disabled = false; alert('Kaydedilemedi, bağlantınızı kontrol edin.'); });
+  });
+})();
+</script>
+{% endblock %}
